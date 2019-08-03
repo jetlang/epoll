@@ -75,7 +75,7 @@ public class EPoll implements Executor {
                     runEvent(swap.get(i));
                 }
             }
-            freeNativeMemory();
+            freeNativeMemory(ptrAddress);
         };
         this.thread = new Thread(eventLoop, threadName);
     }
@@ -86,9 +86,9 @@ public class EPoll implements Executor {
         }
     }
 
-    public void stop(){
+    public void close(){
         if(started.compareAndExchange(false, true)){
-            freeNativeMemory();
+            freeNativeMemory(ptrAddress);
         }
         else {
             execute(()->{
@@ -97,11 +97,6 @@ public class EPoll implements Executor {
         }
     }
 
-    private void freeNativeMemory() {
-        unsafe.freeMemory(ptrAddress);
-        unsafe.freeMemory(readBufferAddress);
-        unsafe.freeMemory(eventArrayAddress);
-    }
 
     protected void runEvent(Runnable runnable) {
         runnable.run();
@@ -114,6 +109,8 @@ public class EPoll implements Executor {
     private static native long getReadBufferAddress(long ptrAddress);
 
     private static native long init(int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes);
+
+    private static native void freeNativeMemory(long ptrAddress);
 
     private static native void interrupt(long ptrAddress);
 
