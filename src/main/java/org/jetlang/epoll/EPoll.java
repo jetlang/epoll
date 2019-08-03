@@ -1,14 +1,29 @@
 package org.jetlang.epoll;
 
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EPoll implements Executor {
 
+    private static final int EVENT_SIZE = 8 + 4 + 4 + 8;
+
+    private static final Unsafe unsafe;
+
     static {
+        try {
+            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            unsafe = (Unsafe) f.get(null);
+        }catch(Exception failed){
+            throw new ExceptionInInitializerError(failed);
+        }
         System.loadLibrary("jetlangepoll");
     }
 
@@ -22,15 +37,20 @@ public class EPoll implements Executor {
     private final ArrayList<State> unused = new ArrayList<>();
     private final ArrayList<State> fds = new ArrayList<State>();
     private final Map<Integer, State> stateMap = new HashMap<>();
+    private final AtomicBoolean started = new AtomicBoolean();
 
     private static class State {
 
         public int fd;
-        public int idx;
+        public final int idx;
 
         public State(int idx) {
             this.idx = idx;
             this.fd = fd;
+        }
+
+        public void onEvent(Unsafe unsafe, long readBufferAddress) {
+
         }
     }
 
@@ -43,19 +63,44 @@ public class EPoll implements Executor {
             while(running){
                 int events = select(ptrAddress);
                 for(int i = 0; i < events; i++){
-
+                    int idx = unsafe.getInt(eventArrayAddress + EVENT_SIZE * i);
+                    fds.get(idx).onEvent(unsafe, readBufferAddress);
+                }
+                synchronized (lock){
+                    ArrayList<Runnable> tmp = pending;
+                    pending = swap;
+                    swap = tmp;
+                }
+                for(int i = 0, size = swap.size(); i < size; i++){
+                    runEvent(swap.get(i));
                 }
             }
-            synchronized (lock){
-                ArrayList<Runnable> tmp = pending;
-                pending = swap;
-                swap = tmp;
-            }
-            for(int i = 0, size = swap.size(); i < size; i++){
-                runEvent(swap.get(i));
-            }
+            freeNativeMemory();
         };
         this.thread = new Thread(eventLoop, threadName);
+    }
+
+    public void start(){
+        if(started.compareAndExchange(false, true)) {
+            thread.start();
+        }
+    }
+
+    public void stop(){
+        if(started.compareAndExchange(false, true)){
+            freeNativeMemory();
+        }
+        else {
+            execute(()->{
+                running = false;
+            });
+        }
+    }
+
+    private void freeNativeMemory() {
+        unsafe.freeMemory(ptrAddress);
+        unsafe.freeMemory(readBufferAddress);
+        unsafe.freeMemory(eventArrayAddress);
     }
 
     protected void runEvent(Runnable runnable) {
