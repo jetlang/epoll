@@ -24,7 +24,7 @@ public class EPoll implements Executor {
         }catch(Exception failed){
             throw new ExceptionInInitializerError(failed);
         }
-        System.loadLibrary("jetlangepoll");
+        System.loadLibrary("jetlang-epoll");
     }
 
     private final Object lock = new Object();
