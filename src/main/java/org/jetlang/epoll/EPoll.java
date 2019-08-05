@@ -58,12 +58,16 @@ public class EPoll implements Executor {
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.readBufferAddress = getReadBufferAddress(ptrAddress);
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
+        System.out.println("eventArrayAddress = " + eventArrayAddress);
+        
         Runnable eventLoop = () -> {
             while(running){
                 int events = select(ptrAddress, -1);
+                System.out.println("events = " + events);
                 for(int i = 0; i < events; i++){
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
-                    int idx = unsafe.getInt(structAddress);
+                    int idx = unsafe.getInt(structAddress + 4);
+                    System.out.println("idx = " + idx);
                     fds.get(idx).handler.onEvent(unsafe, readBufferAddress);
                 }
             }
@@ -110,7 +114,7 @@ public class EPoll implements Executor {
         runnable.run();
     }
 
-    private native int select(long ptrAddress, int timeout);
+    private static native int select(long ptrAddress, int timeout);
 
     private static native long getEventArrayAddress(long ptrAddress);
 

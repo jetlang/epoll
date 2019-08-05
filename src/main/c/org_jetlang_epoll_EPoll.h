@@ -15,7 +15,7 @@ extern "C" {
  * Signature: (J)I
  */
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
-  (JNIEnv *, jobject, jlong, jint);
+  (JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     org_jetlang_epoll_EPoll
