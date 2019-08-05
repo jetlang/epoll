@@ -8,6 +8,7 @@
 #include <netinet/ip.h>
 #include <string.h>
 #include <sys/uio.h>
+#include <errno.h>
 
 struct epoll_state {
    int fd;
@@ -15,9 +16,8 @@ struct epoll_state {
    struct epoll_event * events;
    int max_events;
    struct epoll_event efd_event;
-   char * buffer;
 
-   int max_udp_rcv;
+   int udp_rcv_len;
    struct mmsghdr * udp_rcv;
 };
 
@@ -43,9 +43,9 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
 
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
-  (JNIEnv *, jclass, jlong ptrAddress){
+  (JNIEnv *, jclass, jlong ptrAddress, jint idx){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    return (jlong) state->buffer;
+    return (jlong) state->udp_rcv[idx].msg_hdr.msg_iov->iov_base;
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
@@ -65,20 +65,35 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     printf("EPOLL_CTL_ADD %d\n", EPOLL_CTL_ADD);
     printf("EPOLL_CTL_DEL %d\n", EPOLL_CTL_DEL);
     fflush(stdout);
-    state->buffer = (char *) malloc(readBufferBytes);
-    state->max_udp_rcv = maxDatagramsPerRead;
+    state->udp_rcv_len = maxDatagramsPerRead;
     state->udp_rcv = (struct mmsghdr *) malloc( maxDatagramsPerRead * (sizeof(struct mmsghdr)));
     memset(state->udp_rcv, 0, sizeof(state->udp_rcv));
     for (int i = 0; i < maxDatagramsPerRead; i++) {
        char* buffer = (char *) malloc(readBufferBytes);
+       long addr = (long)buffer;
+       printf("buffer %d address %ld\n", i, addr);
        struct iovec *io = (struct iovec *)malloc(sizeof(struct iovec));
        io->iov_base = buffer;
        io->iov_len = readBufferBytes;
-       state->udp_rcv->msg_hdr.msg_iov = io;
-       state->udp_rcv->msg_hdr.msg_iovlen= 1;
+       state->udp_rcv[i].msg_hdr.msg_iov = io;
+       state->udp_rcv[i].msg_hdr.msg_iovlen= 1;
     }
     return (jlong) state;
   }
+
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
+    (JNIEnv *, jclass, jlong ptrAddress, jint fd){
+    struct epoll_state *state = (struct epoll_state *) ptrAddress;
+    struct timespec timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_nsec = 0;
+    int result = recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, &timeout);
+    printf("result %d errno %d fd %d\n", result, errno, fd);
+    //printf("from buffer %c\n", state->udp_rcv[0].msg_hdr.msg_iov->iov_base[0]);
+    printf("msg length %d\n", state->udp_rcv[0].msg_len);
+    fflush(stdout);
+    return result;
+}
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
   (JNIEnv *, jclass, jlong ptrAddress){
@@ -86,7 +101,6 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
     close(state->fd);
     close(state->efd);
     free(state->events);
-    free(state->buffer);
     free(state->udp_rcv->msg_hdr.msg_iov->iov_base);
     free(state->udp_rcv->msg_hdr.msg_iov);
     free(state->udp_rcv);

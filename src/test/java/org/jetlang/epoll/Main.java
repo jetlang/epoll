@@ -24,8 +24,8 @@ public class Main {
             @Override
             public EventResult onRead(Unsafe unsafe, long readBufferAddress) {
                 System.out.println("unsafe.getLong(readBufferAddress) = " + unsafe.getLong(readBufferAddress));
-                //latch.countDown();
-                return EventResult.Continue;
+                latch.countDown();
+                return EventResult.Remove;
             }
 
             @Override
@@ -43,7 +43,7 @@ public class Main {
         ByteBuffer buf = ByteBuffer.allocate(8);
         for(int i = 0; i < 20; i++){
             buf.clear();
-            buf.putLong(i);
+            buf.put((byte)String.valueOf(i).charAt(0));
             buf.flip();
             sender.send(buf, target);
         }

@@ -30,7 +30,7 @@ public class EPoll implements Executor {
 
     private final Object lock = new Object();
     private final long ptrAddress;
-    private final long readBufferAddress;
+    private final long[] udpReadBuffers;
     private final long eventArrayAddress;
     private final Thread thread;
     private boolean running = true;
@@ -39,11 +39,19 @@ public class EPoll implements Executor {
     private final ArrayList<State> fds = new ArrayList<State>();
     private final Map<Integer, State> stateMap = new HashMap<>();
     private final AtomicBoolean started = new AtomicBoolean();
+    private final Controls controls = new Controls();
 
     private interface EventHandler {
-        EventResult onEvent(Unsafe unsafe, long readBufferAddress);
+        EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress);
 
         void onRemove();
+    }
+
+    private class Controls {
+
+        public int receive(int fd) {
+            return recvmmsg(ptrAddress, fd);
+        }
     }
 
     private static class State {
@@ -74,8 +82,16 @@ public class EPoll implements Executor {
             this.fd = fd;
             this.handler = new EventHandler() {
                 @Override
-                public EventResult onEvent(Unsafe unsafe, long readBufferAddress) {
-                    return reader.onRead(unsafe, readBufferAddress);
+                public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
+                    int numRecv = c.receive(fd);
+                    System.out.println("numRecv = " + numRecv);
+                    for(int i = 0; i < numRecv; i++){
+                        EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
+                        if(r == EventResult.Remove){
+                            return r;
+                        }
+                    }
+                    return EventResult.Continue;
                 }
 
                 @Override
@@ -88,7 +104,11 @@ public class EPoll implements Executor {
 
     public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes) {
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
-        this.readBufferAddress = getReadBufferAddress(ptrAddress);
+        this.udpReadBuffers = new long[maxDatagramsPerRead];
+        for(int i = 0; i < maxDatagramsPerRead; i++){
+            this.udpReadBuffers[i] = getReadBufferAddress(ptrAddress, i);
+            System.out.println("readBuffer i = " + i + " " + udpReadBuffers[i]);
+        }
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
         System.out.println("eventArrayAddress = " + eventArrayAddress);
 
@@ -101,7 +121,7 @@ public class EPoll implements Executor {
                     int idx = unsafe.getInt(structAddress + 4);
                     System.out.println("idx = " + idx);
                     State state = fds.get(idx);
-                    EventResult result = state.handler.onEvent(unsafe, readBufferAddress);
+                    EventResult result = state.handler.onEvent(controls, unsafe, udpReadBuffers);
                     if(result == EventResult.Remove){
                         remove(state.fd);
                     }
@@ -115,7 +135,7 @@ public class EPoll implements Executor {
             ArrayList<Runnable> swap = new ArrayList<>();
 
             @Override
-            public EventResult onEvent(Unsafe unsafe, long readBufferAddress) {
+            public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
                 synchronized (lock) {
                     ArrayList<Runnable> tmp = pending;
                     pending = swap;
@@ -172,7 +192,7 @@ public class EPoll implements Executor {
 
     private static native long getEventArrayAddress(long ptrAddress);
 
-    private static native long getReadBufferAddress(long ptrAddress);
+    private static native long getReadBufferAddress(long ptrAddress, int idx);
 
     private static native long init(int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes);
 
@@ -184,11 +204,13 @@ public class EPoll implements Executor {
 
     private static native long ctl(long ptrAddress, int op, int eventTypes, int fd, int idx);
 
+    private static native int recvmmsg(long ptrAddress, int fd);
+
     public Runnable register(DatagramChannel channel, DatagramReader reader) {
         final int fd = FdUtils.getFd(channel);
         execute(() -> {
             State e = claimState();
-            e.init(fd, reader);;
+            e.init(fd, reader);
             addFd(EventTypes.EPOLLIN.value, fd, e);
             stateMap.put(fd, e);
             System.out.println("registered = " + channel);

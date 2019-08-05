@@ -31,7 +31,7 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
  * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
-  (JNIEnv *, jclass, jlong);
+  (JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     org_jetlang_epoll_EPoll
@@ -67,6 +67,9 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
  */
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
   (JNIEnv *, jclass, jlong, jint, jint, jint, jint);
+
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
+    (JNIEnv *, jclass, jlong, jint);
 
 #ifdef __cplusplus
 }
