@@ -43,8 +43,8 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
   (JNIEnv *, jclass, jlong ptrAddress){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
     close(state->fd);
-    free(state);
     free(state->events);
+    free(state);
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
