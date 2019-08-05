@@ -62,7 +62,8 @@ public class EPoll implements Executor {
             while(running){
                 int events = select(ptrAddress, -1);
                 for(int i = 0; i < events; i++){
-                    int idx = unsafe.getInt(eventArrayAddress + EVENT_SIZE * i);
+                    long structAddress = eventArrayAddress + EVENT_SIZE * i;
+                    int idx = unsafe.getInt(structAddress);
                     fds.get(idx).handler.onEvent(unsafe, readBufferAddress);
                 }
             }
@@ -88,13 +89,13 @@ public class EPoll implements Executor {
     }
 
     public void start(){
-        if(started.compareAndExchange(false, true)) {
+        if(started.compareAndSet(false, true)) {
             thread.start();
         }
     }
 
     public void close(){
-        if(started.compareAndExchange(false, true)){
+        if(started.compareAndSet(false, true)){
             freeNativeMemory(ptrAddress);
         }
         else {

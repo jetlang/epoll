@@ -68,7 +68,7 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
   (JNIEnv *, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
-      char d = 0;
+      char d;
       read(state->efd_event.data.fd, &d, sizeof(char));
   }
 
