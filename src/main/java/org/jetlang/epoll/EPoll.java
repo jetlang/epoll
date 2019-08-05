@@ -39,18 +39,18 @@ public class EPoll implements Executor {
     private final Map<Integer, State> stateMap = new HashMap<>();
     private final AtomicBoolean started = new AtomicBoolean();
 
+    private interface EventHandler {
+        void onEvent(Unsafe unsafe, long readBufferAddress);
+    }
+
     private static class State {
 
         public int fd;
         public final int idx;
+        public EventHandler handler;
 
         public State(int idx) {
             this.idx = idx;
-            this.fd = fd;
-        }
-
-        public void onEvent(Unsafe unsafe, long readBufferAddress) {
-
         }
     }
 
@@ -59,26 +59,32 @@ public class EPoll implements Executor {
         this.readBufferAddress = getReadBufferAddress(ptrAddress);
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
         Runnable eventLoop = () -> {
-            ArrayList<Runnable> swap = new ArrayList<>();
             while(running){
                 int events = select(ptrAddress, -1);
                 for(int i = 0; i < events; i++){
                     int idx = unsafe.getInt(eventArrayAddress + EVENT_SIZE * i);
-                    fds.get(idx).onEvent(unsafe, readBufferAddress);
-                }
-                synchronized (lock){
-                    ArrayList<Runnable> tmp = pending;
-                    pending = swap;
-                    swap = tmp;
-                }
-                for(int i = 0, size = swap.size(); i < size; i++){
-                    runEvent(swap.get(i));
+                    fds.get(idx).handler.onEvent(unsafe, readBufferAddress);
                 }
             }
             freeNativeMemory(ptrAddress);
         };
         this.thread = new Thread(eventLoop, threadName);
         State interrupt = claimState();
+        interrupt.handler = new EventHandler() {
+            ArrayList<Runnable> swap = new ArrayList<>();
+            @Override
+            public void onEvent(Unsafe unsafe, long readBufferAddress) {
+                synchronized (lock){
+                    ArrayList<Runnable> tmp = pending;
+                    pending = swap;
+                    swap = tmp;
+                    clearInterrupt(ptrAddress);
+                }
+                for(int i = 0, size = swap.size(); i < size; i++){
+                    runEvent(swap.get(i));
+                }
+            }
+        };
     }
 
     public void start(){
