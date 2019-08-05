@@ -55,6 +55,9 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     state->efd_event.data.u32 = 0;
     int result = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
     printf("add event fd %d fd %d\n", result, state->efd);
+    printf("EPOLLIN %d\n", EPOLLIN);
+    printf("EPOLL_CTL_ADD %d\n", EPOLL_CTL_ADD);
+    printf("EPOLL_CTL_DEL %d\n", EPOLL_CTL_DEL);
     fflush(stdout);
     state->buffer = (char *) malloc(readBufferBytes);
     return (jlong) state;

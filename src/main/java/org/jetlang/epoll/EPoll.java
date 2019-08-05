@@ -189,7 +189,7 @@ public class EPoll implements Executor {
         execute(() -> {
             State e = claimState();
             e.init(fd, reader);;
-            addFd(EventTypes.EPOLLIN.ordinal(), fd, e);
+            addFd(EventTypes.EPOLLIN.value, fd, e);
             stateMap.put(fd, e);
             System.out.println("registered = " + channel);
         });
@@ -203,7 +203,7 @@ public class EPoll implements Executor {
     private void remove(int fd) {
         State st = stateMap.remove(fd);
         if (st != null) {
-            ctl(ptrAddress, Ops.Del.ordinal(), 0, fd, st.idx);
+            ctl(ptrAddress, Ops.Del.value, 0, fd, st.idx);
             unused.add(st);
             st.cleanupNativeResources(unsafe);
             st.handler.onRemove();
@@ -211,7 +211,7 @@ public class EPoll implements Executor {
     }
 
     private void addFd(int eventTypes, int fd, State st) {
-        st.setNativeStructureAddress(ctl(ptrAddress, Ops.Add.ordinal(), eventTypes, fd, st.idx));
+        st.setNativeStructureAddress(ctl(ptrAddress, Ops.Add.value, eventTypes, fd, st.idx));
     }
 
     private State claimState() {
@@ -237,10 +237,22 @@ public class EPoll implements Executor {
     }
 
     enum Ops {
-        Add, Mod, Del
+        Add(1), Del(2);
+
+        private final int value;
+
+        Ops(int value) {
+            this.value = value;
+        }
     }
 
     enum EventTypes {
-        EPOLLIN, EPOLLOUT
+        EPOLLIN(1);
+
+        public final int value;
+
+        EventTypes(int value) {
+            this.value = value;
+        }
     }
 }
