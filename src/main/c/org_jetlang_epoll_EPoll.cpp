@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <sys/eventfd.h>
 #include <stdio.h>
+#include <netinet/ip.h>
+#include <string.h>
+#include <sys/uio.h>
 
 struct epoll_state {
    int fd;
@@ -13,6 +16,9 @@ struct epoll_state {
    int max_events;
    struct epoll_event efd_event;
    char * buffer;
+
+   int max_udp_rcv;
+   struct mmsghdr * udp_rcv;
 };
 
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
@@ -43,7 +49,7 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
-  (JNIEnv *, jclass, jint maxSelectedEvents, jint, jint readBufferBytes){
+  (JNIEnv *, jclass, jint maxSelectedEvents, jint maxDatagramsPerRead, jint readBufferBytes){
     int epoll_fd = epoll_create1(0);
     printf("epoll_fd %d\n", epoll_fd);
     struct epoll_state *state = (struct epoll_state *) malloc(sizeof(struct epoll_state));
@@ -60,6 +66,17 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     printf("EPOLL_CTL_DEL %d\n", EPOLL_CTL_DEL);
     fflush(stdout);
     state->buffer = (char *) malloc(readBufferBytes);
+    state->max_udp_rcv = maxDatagramsPerRead;
+    state->udp_rcv = (struct mmsghdr *) malloc( maxDatagramsPerRead * (sizeof(struct mmsghdr)));
+    memset(state->udp_rcv, 0, sizeof(state->udp_rcv));
+    for (int i = 0; i < maxDatagramsPerRead; i++) {
+       char* buffer = (char *) malloc(readBufferBytes);
+       struct iovec *io = (struct iovec *)malloc(sizeof(struct iovec));
+       io->iov_base = buffer;
+       io->iov_len = readBufferBytes;
+       state->udp_rcv->msg_hdr.msg_iov = io;
+       state->udp_rcv->msg_hdr.msg_iovlen= 1;
+    }
     return (jlong) state;
   }
 
@@ -70,6 +87,9 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
     close(state->efd);
     free(state->events);
     free(state->buffer);
+    free(state->udp_rcv->msg_hdr.msg_iov->iov_base);
+    free(state->udp_rcv->msg_hdr.msg_iov);
+    free(state->udp_rcv);
     free(state);
   }
 
