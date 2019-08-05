@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
+    <envs>
+      <env name="LD_LIBRARY_PATH" value="." />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="org.jetlang.epoll.Main" />
+    <module name="epoll" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="org.jetlang.epoll.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
