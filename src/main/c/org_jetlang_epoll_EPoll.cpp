@@ -9,8 +9,8 @@ struct epoll_state {
    int fd;
    struct epoll_event * events;
    int max_events;
-
    struct epoll_event efd_event;
+   char * buffer;
 };
 
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
@@ -28,12 +28,13 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
 
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
-  (JNIEnv *, jclass, jlong){
-    return 0;
+  (JNIEnv *, jclass, jlong ptrAddress){
+    struct epoll_state *state = (struct epoll_state *) ptrAddress;
+    return (jlong) state->buffer;
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
-  (JNIEnv *, jclass, jint maxSelectedEvents, jint, jint){
+  (JNIEnv *, jclass, jint maxSelectedEvents, jint, jint readBufferBytes){
     int epoll_fd = epoll_create1(0);
     struct epoll_state *state = (struct epoll_state *) malloc(sizeof(struct epoll_state));
     state->fd = epoll_fd;
@@ -41,7 +42,9 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     state->max_events = maxSelectedEvents;
     state->efd_event.events = EPOLLHUP | EPOLLERR | EPOLLIN;
     state->efd_event.data.fd = eventfd(0, EFD_NONBLOCK);
+    state->efd_event.data.u32 = 0;
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd_event.data.fd, &state->efd_event);
+    state->buffer = (char *) malloc(readBufferBytes);
     return (jlong) state;
   }
 
@@ -51,6 +54,7 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
     close(state->fd);
     close(state->efd_event.data.fd);
     free(state->events);
+    free(state->buffer);
     free(state);
   }
 
