@@ -61,7 +61,7 @@ public class EPoll implements Executor {
         Runnable eventLoop = () -> {
             ArrayList<Runnable> swap = new ArrayList<>();
             while(running){
-                int events = select(ptrAddress);
+                int events = select(ptrAddress, -1);
                 for(int i = 0; i < events; i++){
                     int idx = unsafe.getInt(eventArrayAddress + EVENT_SIZE * i);
                     fds.get(idx).onEvent(unsafe, readBufferAddress);
@@ -102,7 +102,7 @@ public class EPoll implements Executor {
         runnable.run();
     }
 
-    private native int select(long ptrAddress);
+    private native int select(long ptrAddress, int timeout);
 
     private static native long getEventArrayAddress(long ptrAddress);
 
