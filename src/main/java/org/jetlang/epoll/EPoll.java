@@ -117,7 +117,7 @@ public class EPoll implements Executor {
     private static native int ctl(long ptrAddress, int op, int eventTypes, int fd, int idx);
 
     public Runnable register(DatagramChannel channel, DatagramReader reader){
-        int fd = 1; //channel.socket().
+        final int fd = FdUtils.getFd(channel);
         execute(() -> {
             State e = claimState();
             e.fd = fd;

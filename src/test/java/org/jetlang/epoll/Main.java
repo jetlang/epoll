@@ -11,5 +11,7 @@ public class Main {
         channel.configureBlocking(false);
         channel.close();
         e.close();
+        int fd = FdUtils.getFd(channel);
+        System.out.println("fd = " + fd);
     }
 }
