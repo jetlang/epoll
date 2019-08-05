@@ -67,6 +67,16 @@ public class EPoll implements Executor {
             this.eventAddress = ptr;
             hasNativeStructure = true;
         }
+
+        public void init(int fd, DatagramReader reader) {
+            this.fd = fd;
+            this.handler = new EventHandler() {
+                @Override
+                public void onEvent(Unsafe unsafe, long readBufferAddress) {
+
+                }
+            };
+        }
     }
 
     public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes) {
@@ -160,7 +170,7 @@ public class EPoll implements Executor {
         final int fd = FdUtils.getFd(channel);
         execute(() -> {
             State e = claimState();
-            e.fd = fd;
+            e.init(fd, reader);;
             addFd(EventTypes.EPOLLIN.ordinal(), fd, e);
             stateMap.put(fd, e);
         });
