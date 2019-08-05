@@ -92,7 +92,12 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
   }
 
 
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_ctl
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jint){
-    return 0;
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
+  (JNIEnv *, jclass, jlong ptrAddress, jint op, jint eventTypes, jint fd, jint idx){
+    struct epoll_state *state = (struct epoll_state *) ptrAddress;
+    struct epoll_event *event = (struct epoll_event *) malloc(sizeof(struct epoll_event));
+    event->events = eventTypes;
+    event->data.u32 = idx;
+    epoll_ctl(state->fd, op, fd, event);
+    return (jlong) event;
   }

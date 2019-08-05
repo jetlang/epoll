@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,7 +22,7 @@ public class EPoll implements Executor {
             Field f = Unsafe.class.getDeclaredField("theUnsafe");
             f.setAccessible(true);
             unsafe = (Unsafe) f.get(null);
-        }catch(Exception failed){
+        } catch (Exception failed) {
             throw new ExceptionInInitializerError(failed);
         }
         System.loadLibrary("jetlang-epoll");
@@ -48,62 +49,87 @@ public class EPoll implements Executor {
         public int fd;
         public final int idx;
         public EventHandler handler;
+        private boolean hasNativeStructure;
+        private long eventAddress;
 
         public State(int idx) {
             this.idx = idx;
         }
+
+        public void cleanupNativeResources(Unsafe unsafe) {
+            if(hasNativeStructure) {
+                hasNativeStructure = false;
+                unsafe.freeMemory(eventAddress);
+            }
+        }
+
+        public void setNativeStructureAddress(long ptr) {
+            this.eventAddress = ptr;
+            hasNativeStructure = true;
+        }
     }
 
-    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes){
+    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes) {
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.readBufferAddress = getReadBufferAddress(ptrAddress);
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
         System.out.println("eventArrayAddress = " + eventArrayAddress);
-        
+
         Runnable eventLoop = () -> {
-            while(running){
+            while (running) {
                 int events = select(ptrAddress, -1);
                 System.out.println("events = " + events);
-                for(int i = 0; i < events; i++){
+                for (int i = 0; i < events; i++) {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
                     System.out.println("idx = " + idx);
                     fds.get(idx).handler.onEvent(unsafe, readBufferAddress);
                 }
             }
-            freeNativeMemory(ptrAddress);
+            cleanUpNativeResources();
         };
         this.thread = new Thread(eventLoop, threadName);
         State interrupt = claimState();
         interrupt.handler = new EventHandler() {
             ArrayList<Runnable> swap = new ArrayList<>();
+
             @Override
             public void onEvent(Unsafe unsafe, long readBufferAddress) {
-                synchronized (lock){
+                synchronized (lock) {
                     ArrayList<Runnable> tmp = pending;
                     pending = swap;
                     swap = tmp;
                     clearInterrupt(ptrAddress);
                 }
-                for(int i = 0, size = swap.size(); i < size; i++){
+                for (int i = 0, size = swap.size(); i < size; i++) {
                     runEvent(swap.get(i));
                 }
             }
         };
     }
 
-    public void start(){
-        if(started.compareAndSet(false, true)) {
+    private void cleanUpNativeResources() {
+        List<Integer> allFds = new ArrayList<>(fds.size());
+        for (State fd : fds) {
+            allFds.add(fd.idx);
+        }
+        for (Integer allFd : allFds) {
+            remove(allFd);
+        }
+        freeNativeMemory(ptrAddress);
+    }
+
+    public void start() {
+        if (started.compareAndSet(false, true)) {
             thread.start();
         }
     }
 
-    public void close(){
-        if(started.compareAndSet(false, true)){
-            freeNativeMemory(ptrAddress);
-        }
-        else {
-            execute(()->{
+    public void close() {
+        if (started.compareAndSet(false, true)) {
+            cleanUpNativeResources();
+        } else {
+            execute(() -> {
                 running = false;
             });
         }
@@ -128,31 +154,40 @@ public class EPoll implements Executor {
 
     private static native void clearInterrupt(long ptrAddress);
 
-    private static native int ctl(long ptrAddress, int op, int eventTypes, int fd, int idx);
+    private static native long ctl(long ptrAddress, int op, int eventTypes, int fd, int idx);
 
-    public Runnable register(DatagramChannel channel, DatagramReader reader){
+    public Runnable register(DatagramChannel channel, DatagramReader reader) {
         final int fd = FdUtils.getFd(channel);
         execute(() -> {
             State e = claimState();
             e.fd = fd;
-            ctl(ptrAddress, Ops.Add.ordinal(), EventTypes.EPOLLIN.ordinal(), fd, e.idx);
+            addFd(EventTypes.EPOLLIN.ordinal(), fd, e);
             stateMap.put(fd, e);
         });
-        return ()->{
-            execute(()->{
-                State st = stateMap.remove(fd);
-                if(st != null){
-                    ctl(ptrAddress, Ops.Del.ordinal(), 0, fd, st.idx);
-                    unused.add(st);
-                }
+        return () -> {
+            execute(() -> {
+                remove(fd);
             });
         };
     }
 
+    private void remove(int fd) {
+        State st = stateMap.remove(fd);
+        if (st != null) {
+            ctl(ptrAddress, Ops.Del.ordinal(), 0, fd, st.idx);
+            unused.add(st);
+            st.cleanupNativeResources(unsafe);
+        }
+    }
+
+    private void addFd(int eventTypes, int fd, State st) {
+        st.setNativeStructureAddress(ctl(ptrAddress, Ops.Add.ordinal(), eventTypes, fd, st.idx));
+    }
+
     private State claimState() {
-        if(!unused.isEmpty()){
-            return unused.remove(unused.size() -1);
-        }else {
+        if (!unused.isEmpty()) {
+            return unused.remove(unused.size() - 1);
+        } else {
             State st = new State(fds.size());
             fds.add(st);
             return st;
@@ -161,10 +196,10 @@ public class EPoll implements Executor {
 
     @Override
     public void execute(Runnable runnable) {
-        synchronized (lock){
-            if(running){
+        synchronized (lock) {
+            if (running) {
                 pending.add(runnable);
-                if(pending.size() == 1){
+                if (pending.size() == 1) {
                     interrupt(ptrAddress);
                 }
             }

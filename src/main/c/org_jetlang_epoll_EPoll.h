@@ -65,7 +65,7 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
  * Method:    ctl
  * Signature: (JIIII)I
  */
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_ctl
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
   (JNIEnv *, jclass, jlong, jint, jint, jint, jint);
 
 #ifdef __cplusplus
