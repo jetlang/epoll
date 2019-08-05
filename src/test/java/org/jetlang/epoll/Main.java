@@ -10,5 +10,6 @@ public class Main {
         DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
         channel.close();
+        e.close();
     }
 }
