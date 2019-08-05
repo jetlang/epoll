@@ -57,6 +57,9 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
   (JNIEnv *, jclass, jlong);
 
+JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
+  (JNIEnv *, jclass, jlong);
+
 /*
  * Class:     org_jetlang_epoll_EPoll
  * Method:    ctl

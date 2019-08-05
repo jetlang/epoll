@@ -78,6 +78,7 @@ public class EPoll implements Executor {
             freeNativeMemory(ptrAddress);
         };
         this.thread = new Thread(eventLoop, threadName);
+        State interrupt = claimState();
     }
 
     public void start(){
@@ -113,6 +114,8 @@ public class EPoll implements Executor {
     private static native void freeNativeMemory(long ptrAddress);
 
     private static native void interrupt(long ptrAddress);
+
+    private static native void clearInterrupt(long ptrAddress);
 
     private static native int ctl(long ptrAddress, int op, int eventTypes, int fd, int idx);
 
