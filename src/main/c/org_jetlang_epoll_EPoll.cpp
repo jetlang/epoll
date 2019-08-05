@@ -30,7 +30,7 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     int epoll_fd = epoll_create1(0);
     struct epoll_state *state = (struct epoll_state *) malloc(sizeof(struct epoll_state));
     state->fd = epoll_fd;
-    return 0;
+    return (jlong) state;
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
