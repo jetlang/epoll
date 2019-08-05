@@ -41,7 +41,9 @@ public class EPoll implements Executor {
     private final AtomicBoolean started = new AtomicBoolean();
 
     private interface EventHandler {
-        void onEvent(Unsafe unsafe, long readBufferAddress);
+        EventResult onEvent(Unsafe unsafe, long readBufferAddress);
+
+        void onRemove();
     }
 
     private static class State {
@@ -72,8 +74,13 @@ public class EPoll implements Executor {
             this.fd = fd;
             this.handler = new EventHandler() {
                 @Override
-                public void onEvent(Unsafe unsafe, long readBufferAddress) {
+                public EventResult onEvent(Unsafe unsafe, long readBufferAddress) {
+                    return reader.onRead(unsafe, readBufferAddress);
+                }
 
+                @Override
+                public void onRemove() {
+                    reader.onRemove();
                 }
             };
         }
@@ -93,7 +100,11 @@ public class EPoll implements Executor {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
                     System.out.println("idx = " + idx);
-                    fds.get(idx).handler.onEvent(unsafe, readBufferAddress);
+                    State state = fds.get(idx);
+                    EventResult result = state.handler.onEvent(unsafe, readBufferAddress);
+                    if(result == EventResult.Remove){
+                        remove(state.fd);
+                    }
                 }
             }
             cleanUpNativeResources();
@@ -104,7 +115,7 @@ public class EPoll implements Executor {
             ArrayList<Runnable> swap = new ArrayList<>();
 
             @Override
-            public void onEvent(Unsafe unsafe, long readBufferAddress) {
+            public EventResult onEvent(Unsafe unsafe, long readBufferAddress) {
                 synchronized (lock) {
                     ArrayList<Runnable> tmp = pending;
                     pending = swap;
@@ -114,6 +125,13 @@ public class EPoll implements Executor {
                 for (int i = 0, size = swap.size(); i < size; i++) {
                     runEvent(swap.get(i));
                 }
+                swap.clear();
+                return null;
+            }
+
+            @Override
+            public void onRemove() {
+
             }
         };
     }
@@ -121,7 +139,7 @@ public class EPoll implements Executor {
     private void cleanUpNativeResources() {
         List<Integer> allFds = new ArrayList<>(fds.size());
         for (State fd : fds) {
-            allFds.add(fd.idx);
+            allFds.add(fd.fd);
         }
         for (Integer allFd : allFds) {
             remove(allFd);
@@ -173,6 +191,7 @@ public class EPoll implements Executor {
             e.init(fd, reader);;
             addFd(EventTypes.EPOLLIN.ordinal(), fd, e);
             stateMap.put(fd, e);
+            System.out.println("registered = " + channel);
         });
         return () -> {
             execute(() -> {
@@ -187,6 +206,7 @@ public class EPoll implements Executor {
             ctl(ptrAddress, Ops.Del.ordinal(), 0, fd, st.idx);
             unused.add(st);
             st.cleanupNativeResources(unsafe);
+            st.handler.onRemove();
         }
     }
 
