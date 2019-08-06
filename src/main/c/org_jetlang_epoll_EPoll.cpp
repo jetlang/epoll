@@ -24,13 +24,11 @@ struct epoll_state {
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
   (JNIEnv *, jclass, jlong ptrAddress, jint timeout){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    printf("epoll wait\n");
-    fflush(stdout);
     int result = epoll_wait(state->fd, state->events, state->max_events, timeout);
-    printf("epoll wait %d\n", result);
-    printf("events_address %p\n", &state->events);
-    printf("events_address.fd %p\n", &state->events[0].data.fd);
-    fflush(stdout);
+//    printf("epoll wait %d\n", result);
+//    printf("events_address %p\n", &state->events);
+//    printf("events_address.fd %p\n", &state->events[0].data.fd);
+//    fflush(stdout);
     return result;
  }
 
@@ -46,6 +44,11 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
   (JNIEnv *, jclass, jlong ptrAddress, jint idx){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
     return (jlong) state->udp_rcv[idx].msg_hdr.msg_iov->iov_base;
+}
+
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
+  (JNIEnv *, jclass){
+    return sizeof(struct epoll_event);
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
@@ -87,12 +90,14 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
     struct timespec timeout;
     timeout.tv_sec = 0;
     timeout.tv_nsec = 0;
-    int result = recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, &timeout);
-    printf("result %d errno %d fd %d\n", result, errno, fd);
-    //printf("from buffer %c\n", state->udp_rcv[0].msg_hdr.msg_iov->iov_base[0]);
-    printf("msg length %d\n", state->udp_rcv[0].msg_len);
-    fflush(stdout);
-    return result;
+    return recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, &timeout);
+//    if(result != 1){
+//        printf("result %d errno %d fd %d\n", result, errno, fd);
+//        //printf("from buffer %c\n", state->udp_rcv[0].msg_hdr.msg_iov->iov_base[0]);
+//        printf("msg length %d\n", state->udp_rcv[0].msg_len);
+//        fflush(stdout);
+//    }
+//    return result;
 }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
@@ -110,22 +115,15 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
   (JNIEnv *, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
-      printf("found epoll_fd %d\n", state->fd);
       uint64_t d;
-      int written = write(state->efd, &d, sizeof(uint64_t));
-      printf("written %d to %d\n", written, state->efd_event.data.fd);
-      fflush(stdout);
+      write(state->efd, &d, sizeof(uint64_t));
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
   (JNIEnv *, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       uint64_t d;
-      printf("start read %d\n", state->efd);
-      fflush(stdout);
-      int result = read(state->efd, &d, sizeof(uint64_t));
-      printf("read result %d\n", result);
-      fflush(stdout);
+      read(state->efd, &d, sizeof(uint64_t));
   }
 
 
@@ -135,6 +133,7 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
     struct epoll_event *event = (struct epoll_event *) malloc(sizeof(struct epoll_event));
     event->events = eventTypes;
     event->data.u32 = idx;
-    epoll_ctl(state->fd, op, fd, event);
+    int result = epoll_ctl(state->fd, op, fd, event);
+    //printf("%d ctl fd %d result %d errno %d\n", op, fd, result, errno);
     return (jlong) event;
   }

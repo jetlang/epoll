@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EPoll implements Executor {
 
-    private static final int EVENT_SIZE = 8 + 4 + 4 + 8;
+    private static final int EVENT_SIZE;
 
     private static final Unsafe unsafe;
 
@@ -26,6 +26,7 @@ public class EPoll implements Executor {
             throw new ExceptionInInitializerError(failed);
         }
         System.loadLibrary("jetlang-epoll");
+        EVENT_SIZE = getEpollEventSize();
     }
 
     private final Object lock = new Object();
@@ -84,7 +85,9 @@ public class EPoll implements Executor {
                 @Override
                 public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
                     int numRecv = c.receive(fd);
-                    System.out.println("numRecv = " + numRecv);
+                    if(numRecv != 1) {
+                        System.out.println("numRecv = " + numRecv);
+                    }
                     for(int i = 0; i < numRecv; i++){
                         EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
                         if(r == EventResult.Remove){
@@ -115,13 +118,19 @@ public class EPoll implements Executor {
         Runnable eventLoop = () -> {
             while (running) {
                 int events = select(ptrAddress, -1);
-                System.out.println("events = " + events);
+                if(events != 1){
+                    System.out.println("events = " + events);
+                }
                 for (int i = 0; i < events; i++) {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
-                    System.out.println("idx = " + idx);
                     State state = fds.get(idx);
                     EventResult result = state.handler.onEvent(controls, unsafe, udpReadBuffers);
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        
+                    };
                     if(result == EventResult.Remove){
                         remove(state.fd);
                     }
@@ -193,6 +202,8 @@ public class EPoll implements Executor {
     private static native long getEventArrayAddress(long ptrAddress);
 
     private static native long getReadBufferAddress(long ptrAddress, int idx);
+
+    private static native int getEpollEventSize();
 
     private static native long init(int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes);
 
