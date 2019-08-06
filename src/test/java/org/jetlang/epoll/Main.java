@@ -5,6 +5,7 @@ import sun.misc.Unsafe;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -19,13 +20,14 @@ public class Main {
         DatagramChannel sender = DatagramChannel.open();
         EPoll e = new EPoll("epoll", 5, 16, 1024 * 8);
         e.start();
-        CountDownLatch latch = new CountDownLatch(2);
+        int msgCount = 20;
+        CountDownLatch latch = new CountDownLatch(msgCount);
         e.register(rcv, new DatagramReader() {
             @Override
             public EventResult onRead(Unsafe unsafe, long readBufferAddress) {
-                System.out.println("unsafe.getLong(readBufferAddress) = " + unsafe.getLong(readBufferAddress));
+                System.out.println(readBufferAddress + " unsafe.getLong = " + unsafe.getLong(readBufferAddress));
                 latch.countDown();
-                return EventResult.Remove;
+                return EventResult.Continue;
             }
 
             @Override
@@ -38,12 +40,11 @@ public class Main {
                 }
             }
         });
-        e.execute(latch::countDown);
         InetSocketAddress target = new InetSocketAddress("wud-mrettig02", 9999);
-        ByteBuffer buf = ByteBuffer.allocate(8);
-        for(int i = 0; i < 20; i++){
+        ByteBuffer buf = ByteBuffer.allocateDirect(8).order(ByteOrder.LITTLE_ENDIAN);
+        for(int i = 0; i < msgCount; i++){
             buf.clear();
-            buf.put((byte)String.valueOf(i).charAt(0));
+            buf.putLong(i);
             buf.flip();
             sender.send(buf, target);
         }
