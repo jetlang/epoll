@@ -110,10 +110,8 @@ public class EPoll implements Executor {
         this.udpReadBuffers = new long[maxDatagramsPerRead];
         for(int i = 0; i < maxDatagramsPerRead; i++){
             this.udpReadBuffers[i] = getReadBufferAddress(ptrAddress, i);
-            System.out.println("readBuffer i = " + i + " " + udpReadBuffers[i]);
         }
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
-        System.out.println("eventArrayAddress = " + eventArrayAddress);
 
         Runnable eventLoop = () -> {
             while (running) {
@@ -216,7 +214,6 @@ public class EPoll implements Executor {
             e.init(fd, reader);
             addFd(EventTypes.EPOLLIN.value, fd, e);
             stateMap.put(fd, e);
-            System.out.println("registered = " + channel);
         });
         return () -> {
             execute(() -> {
