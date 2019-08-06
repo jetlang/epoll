@@ -85,9 +85,9 @@ public class EPoll implements Executor {
                 @Override
                 public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
                     int numRecv = c.receive(fd);
-                    if(numRecv != 1) {
-                        System.out.println("numRecv = " + numRecv);
-                    }
+//                    if(numRecv != 1) {
+//                        System.out.println("numRecv = " + numRecv);
+//                    }
                     for(int i = 0; i < numRecv; i++){
                         EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
                         if(r == EventResult.Remove){
@@ -118,19 +118,11 @@ public class EPoll implements Executor {
         Runnable eventLoop = () -> {
             while (running) {
                 int events = select(ptrAddress, -1);
-                if(events != 1){
-                    System.out.println("events = " + events);
-                }
                 for (int i = 0; i < events; i++) {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
                     State state = fds.get(idx);
                     EventResult result = state.handler.onEvent(controls, unsafe, udpReadBuffers);
-                    try {
-                        Thread.sleep(5);
-                    } catch (InterruptedException e) {
-                        
-                    };
                     if(result == EventResult.Remove){
                         remove(state.fd);
                     }

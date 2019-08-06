@@ -62,19 +62,12 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     state->efd = eventfd(0, EFD_NONBLOCK);
     state->efd_event.events = EPOLLHUP | EPOLLERR | EPOLLIN;
     state->efd_event.data.u32 = 0;
-    int result = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
-    printf("add event fd %d fd %d\n", result, state->efd);
-    printf("EPOLLIN %d\n", EPOLLIN);
-    printf("EPOLL_CTL_ADD %d\n", EPOLL_CTL_ADD);
-    printf("EPOLL_CTL_DEL %d\n", EPOLL_CTL_DEL);
-    fflush(stdout);
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
     state->udp_rcv_len = maxDatagramsPerRead;
     state->udp_rcv = (struct mmsghdr *) malloc( maxDatagramsPerRead * (sizeof(struct mmsghdr)));
-    memset(state->udp_rcv, 0, sizeof(state->udp_rcv));
+    memset(state->udp_rcv, 0, maxDatagramsPerRead * (sizeof(struct mmsghdr)));
     for (int i = 0; i < maxDatagramsPerRead; i++) {
        char* buffer = (char *) malloc(readBufferBytes);
-       long addr = (long)buffer;
-       printf("buffer %d address %ld\n", i, addr);
        struct iovec *io = (struct iovec *)malloc(sizeof(struct iovec));
        io->iov_base = buffer;
        io->iov_len = readBufferBytes;
@@ -87,17 +80,13 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
     (JNIEnv *, jclass, jlong ptrAddress, jint fd){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    struct timespec timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_nsec = 0;
-    return recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, &timeout);
-//    if(result != 1){
-//        printf("result %d errno %d fd %d\n", result, errno, fd);
-//        //printf("from buffer %c\n", state->udp_rcv[0].msg_hdr.msg_iov->iov_base[0]);
-//        printf("msg length %d\n", state->udp_rcv[0].msg_len);
-//        fflush(stdout);
-//    }
-//    return result;
+    //printf("to receive %d\n", state->udp_rcv_len);
+    int result = recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, NULL);
+    if(result != 1){
+        printf("result %d errno %d fd %d\n", result, errno, fd);
+        fflush(stdout);
+    }
+    return result;
 }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
