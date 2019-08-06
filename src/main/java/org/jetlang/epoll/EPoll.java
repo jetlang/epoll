@@ -68,7 +68,7 @@ public class EPoll implements Executor {
         }
 
         public void cleanupNativeResources(Unsafe unsafe) {
-            if(hasNativeStructure) {
+            if (hasNativeStructure) {
                 hasNativeStructure = false;
                 unsafe.freeMemory(eventAddress);
             }
@@ -84,14 +84,12 @@ public class EPoll implements Executor {
             this.handler = new EventHandler() {
                 @Override
                 public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
-                    int numRecv = c.receive(fd);
-//                    if(numRecv != 1) {
-//                        System.out.println("numRecv = " + numRecv);
-//                    }
-                    for(int i = 0; i < numRecv; i++){
-                        EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
-                        if(r == EventResult.Remove){
-                            return r;
+                    for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
+                        for (int i = 0; i < numRecv; i++) {
+                            EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
+                            if (r == EventResult.Remove) {
+                                return r;
+                            }
                         }
                     }
                     return EventResult.Continue;
@@ -108,7 +106,7 @@ public class EPoll implements Executor {
     public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes) {
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.udpReadBuffers = new long[maxDatagramsPerRead];
-        for(int i = 0; i < maxDatagramsPerRead; i++){
+        for (int i = 0; i < maxDatagramsPerRead; i++) {
             this.udpReadBuffers[i] = getReadBufferAddress(ptrAddress, i);
         }
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
@@ -121,7 +119,7 @@ public class EPoll implements Executor {
                     int idx = unsafe.getInt(structAddress + 4);
                     State state = fds.get(idx);
                     EventResult result = state.handler.onEvent(controls, unsafe, udpReadBuffers);
-                    if(result == EventResult.Remove){
+                    if (result == EventResult.Remove) {
                         remove(state.fd);
                     }
                 }
@@ -244,6 +242,10 @@ public class EPoll implements Executor {
             fds.add(st);
             return st;
         }
+    }
+
+    public Thread getThread() {
+        return thread;
     }
 
     @Override
