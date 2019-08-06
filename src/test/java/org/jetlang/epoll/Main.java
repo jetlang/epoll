@@ -27,6 +27,11 @@ public class Main {
             public EventResult onRead(Unsafe unsafe, long readBufferAddress) {
                 System.out.println(readBufferAddress + " unsafe.getLong = " + unsafe.getLong(readBufferAddress));
                 latch.countDown();
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {
+
+                }
                 return EventResult.Continue;
             }
 
@@ -40,7 +45,7 @@ public class Main {
                 }
             }
         });
-        InetSocketAddress target = new InetSocketAddress("wud-mrettig02", 9999);
+        InetSocketAddress target = new InetSocketAddress("localhost", 9999);
         ByteBuffer buf = ByteBuffer.allocateDirect(8).order(ByteOrder.LITTLE_ENDIAN);
         for(int i = 0; i < msgCount; i++){
             buf.clear();
