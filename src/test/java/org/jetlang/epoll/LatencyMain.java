@@ -9,6 +9,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -20,16 +21,28 @@ public class LatencyMain {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        run(LatencyMain::createNio, 5_000_000, 10_000, 10);
-        run(LatencyMain::createEpoll, 5_000_000, 10_000, 10);
-
+        long seed = Long.parseLong(args[1]);
+        final Factory f;
+        switch (args[0].toLowerCase()) {
+            case "epoll":
+                f = LatencyMain::createEpoll;
+                break;
+            case "nio":
+                f = LatencyMain::createNio;
+                break;
+            default:
+                throw new RuntimeException("unknown: " + args[0]);
+        }
+        ;
+        System.out.println("seed = " + seed);
+        run(f, 5_000_000, seed, 5);
         for (int i = 0; i < 10; i++) {
-            run(LatencyMain::createNio, 1000, 1, 1);
-            run(LatencyMain::createEpoll, 1000, 1, 1);
+            run(f, 1000, seed, 500);
         }
     }
 
-    private static void run(Factory f, int msgCount, int sleepInterval, int sleepMs) throws IOException, InterruptedException {
+    private static void run(Factory f, int msgCount, long seed, int maxSleepMicros) throws IOException, InterruptedException {
+        Random random = new Random(seed);
         DatagramChannel rcv = DatagramChannel.open();
         rcv.socket().bind(new InetSocketAddress(9999));
         rcv.socket().setReceiveBufferSize(1024 * 1024);
@@ -48,8 +61,10 @@ public class LatencyMain {
             buf.putLong(System.nanoTime());
             buf.flip();
             sender.send(buf, target);
-            if (i % sleepInterval == 0) {
-                Thread.sleep(sleepMs);
+            long sentNanos = System.nanoTime();
+            int sleepTimeNanos = random.nextInt((int) TimeUnit.MICROSECONDS.toNanos(maxSleepMicros));
+            while (System.nanoTime() - sentNanos < sleepTimeNanos) {
+                Thread.yield();
             }
         }
 
@@ -67,7 +82,7 @@ public class LatencyMain {
     }
 
     private static Runnable createEpoll(DatagramChannel rcv, int msgCount, CountDownLatch latch) {
-        EPoll e = new EPoll("epoll", 1, 16, 8);
+        EPoll e = new EPoll("epoll", 1, 16, 8, 0);
         e.start();
         DatagramReader datagramReader = new DatagramReader() {
             int cnt = 0;
@@ -79,9 +94,6 @@ public class LatencyMain {
                 if (++cnt == msgCount) {
                     latch.countDown();
                     System.out.println("Epoll Receive nanos " + (totalLatency / msgCount));
-                }
-                if (cnt == 1) {
-                    System.out.println("epoll cnt = " + cnt);
                 }
                 return EventResult.Continue;
             }
@@ -112,10 +124,10 @@ public class LatencyMain {
                     boolean running = true;
                     while (running) {
                         try {
-                            int keys = s.select();
+                            int keys = s.selectNow();
                             if (keys > 0) {
                                 Set<SelectionKey> selected = s.selectedKeys();
-                                while (rcv.receive(b) != null && running) {
+                                while (running && rcv.receive(b) != null) {
                                     b.flip();
                                     latency += (System.nanoTime() - b.getLong());
                                     b.clear();
@@ -126,8 +138,6 @@ public class LatencyMain {
                                     }
                                 }
                                 selected.clear();
-                            } else {
-                                System.err.println(keys + " selected ");
                             }
                         } catch (Exception failed) {
                             failed.printStackTrace();

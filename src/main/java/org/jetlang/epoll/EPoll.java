@@ -79,8 +79,8 @@ public class EPoll implements Executor {
         }
     }
 
-    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes) {
-        this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
+    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, int pollTimeout) {
+        this.ptrAddress = init(maxSelectedEvents + 1, maxDatagramsPerRead, readBufferBytes);
         this.udpReadBuffers = new long[maxDatagramsPerRead];
         for (int i = 0; i < maxDatagramsPerRead; i++) {
             this.udpReadBuffers[i] = getReadBufferAddress(ptrAddress, i);
@@ -89,7 +89,7 @@ public class EPoll implements Executor {
 
         Runnable eventLoop = () -> {
             while (running) {
-                int events = select(ptrAddress, -1);
+                int events = select(ptrAddress, pollTimeout);
                 for (int i = 0; i < events; i++) {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
