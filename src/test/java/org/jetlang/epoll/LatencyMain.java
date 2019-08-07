@@ -37,6 +37,7 @@ public class LatencyMain {
         for (int i = 0; i < 10; i++) {
             run(f, 1000, seed, 0);
         }
+        run(f, 5_000_000, seed, 0);
     }
 
     private static void run(Factory f, int msgCount, long seed, int maxSleepMicros) throws IOException, InterruptedException {

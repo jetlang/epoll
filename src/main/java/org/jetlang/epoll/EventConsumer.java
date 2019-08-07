@@ -9,6 +9,6 @@ public interface EventConsumer {
     void onRemove();
 
     interface Factory {
-        EventConsumer create(int fd, Unsafe unsafe, EPoll.Controls controls, EPoll.Packet[] udpReadBuffers);
+        EventConsumer create(int fd, Unsafe unsafe, EPoll.Controls controls, EPoll.Packet[] pkts);
     }
 }
