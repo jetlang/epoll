@@ -1,7 +1,5 @@
 package org.jetlang.epoll;
 
-import sun.misc.Unsafe;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -91,11 +89,12 @@ public class LatencyMain {
             long totalLatency = 0;
 
             @Override
-            public EventResult onRead(Unsafe unsafe, long readBufferAddress) {
-                totalLatency += (System.nanoTime() - unsafe.getLong(readBufferAddress));
+            public EventResult onRead(EPoll.Packet pkt) {
+                int length = pkt.getLength();
+                totalLatency += (System.nanoTime() - pkt.unsafe.getLong(pkt.bufferAddress));
                 if (++cnt == msgCount) {
                     latch.countDown();
-                    System.out.println("Epoll Receive nanos " + (totalLatency / msgCount));
+                    System.out.println("Epoll Receive nanos " + (totalLatency / msgCount) + " " + length);
                 }
                 return EventResult.Continue;
             }

@@ -1,7 +1,5 @@
 package org.jetlang.epoll;
 
-import sun.misc.Unsafe;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -24,8 +22,8 @@ public class Main {
         CountDownLatch latch = new CountDownLatch(msgCount);
         e.register(rcv, new DatagramReader() {
             @Override
-            public EventResult onRead(Unsafe unsafe, long readBufferAddress) {
-                System.out.println(readBufferAddress + " unsafe.getLong = " + unsafe.getLong(readBufferAddress));
+            public EventResult onRead(EPoll.Packet pkt) {
+                System.out.println(" unsafe.getLong = " + pkt.unsafe.getLong(pkt.bufferAddress));
                 latch.countDown();
                 try {
                     Thread.sleep(1);

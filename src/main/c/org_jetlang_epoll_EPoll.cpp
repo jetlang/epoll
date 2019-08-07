@@ -47,6 +47,12 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
     return (jlong) state->udp_rcv[idx].msg_hdr.msg_iov->iov_base;
 }
 
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getMsgLengthAddress
+  (JNIEnv *, jclass, jlong ptrAddress, jint idx){
+    struct epoll_state *state = (struct epoll_state *) ptrAddress;
+    return (jlong) &state->udp_rcv[idx].msg_len;
+}
+
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
   (JNIEnv *, jclass){
     return sizeof(struct epoll_event);
@@ -91,7 +97,7 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
     return (jlong) state;
   }
 
-JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
     (JNIEnv *, jclass, jlong ptrAddress, jint fd){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
     //printf("to receive %d\n", state->udp_rcv_len);

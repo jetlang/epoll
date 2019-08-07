@@ -33,6 +33,10 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
   (JNIEnv *, jclass, jlong, jint);
 
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getMsgLengthAddress
+  (JNIEnv *, jclass, jlong, jint);
+
+
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
   (JNIEnv *, jclass);
 
@@ -72,7 +76,7 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
   (JNIEnv *, jclass, jlong, jint, jint, jint, jint);
 
-JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
     (JNIEnv *, jclass, jlong, jint);
 
 #ifdef __cplusplus

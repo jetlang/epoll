@@ -31,7 +31,7 @@ public class EPoll implements Executor {
 
     private final Object lock = new Object();
     private final long ptrAddress;
-    private final long[] udpReadBuffers;
+    private final Packet[] udpReadBuffers;
     private final long eventArrayAddress;
     private final Thread thread;
     private boolean running = true;
@@ -79,11 +79,29 @@ public class EPoll implements Executor {
         }
     }
 
+    public static class Packet {
+        public final Unsafe unsafe;
+        public final long bufferAddress;
+        private final long msgLengthAddress;
+
+        public Packet(Unsafe u, long bufferAddress, long msgLengthAddress) {
+            unsafe = u;
+            this.bufferAddress = bufferAddress;
+            this.msgLengthAddress = msgLengthAddress;
+        }
+
+        public int getLength() {
+            return unsafe.getInt(msgLengthAddress);
+        }
+    }
+
     public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, int pollTimeout) {
         this.ptrAddress = init(maxSelectedEvents + 1, maxDatagramsPerRead, readBufferBytes);
-        this.udpReadBuffers = new long[maxDatagramsPerRead];
+        this.udpReadBuffers = new Packet[maxDatagramsPerRead];
         for (int i = 0; i < maxDatagramsPerRead; i++) {
-            this.udpReadBuffers[i] = getReadBufferAddress(ptrAddress, i);
+            long readBufferAddress = getReadBufferAddress(ptrAddress, i);
+            Packet p = new Packet(unsafe, readBufferAddress, getMsgLengthAddress(ptrAddress, i));
+            this.udpReadBuffers[i] = p;
         }
         this.eventArrayAddress = getEventArrayAddress(ptrAddress);
 
@@ -176,6 +194,8 @@ public class EPoll implements Executor {
     private static native long getEventArrayAddress(long ptrAddress);
 
     private static native long getReadBufferAddress(long ptrAddress, int idx);
+
+    private static native long getMsgLengthAddress(long ptrAddress, int idx);
 
     private static native int getEpollEventSize();
 
