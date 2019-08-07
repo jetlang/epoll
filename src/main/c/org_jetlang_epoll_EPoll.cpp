@@ -54,15 +54,27 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
   (JNIEnv *, jclass, jint maxSelectedEvents, jint maxDatagramsPerRead, jint readBufferBytes){
     int epoll_fd = epoll_create1(0);
-    //printf("epoll_fd %d\n", epoll_fd);
+    if(epoll_fd < 0){
+        printf("epoll_fd %d %d\n", epoll_fd, errno);
+        fflush(stdout);
+    }
+
     struct epoll_state *state = (struct epoll_state *) malloc(sizeof(struct epoll_state));
     state->fd = epoll_fd;
     state->events = (struct epoll_event *) malloc(maxSelectedEvents * (sizeof(struct epoll_event)));
     state->max_events = maxSelectedEvents;
     state->efd = eventfd(0, EFD_NONBLOCK);
+    if(state->efd < 0){
+        printf("create fd failed %d\n", errno);
+        fflush(stdout);
+    }
     state->efd_event.events = EPOLLHUP | EPOLLERR | EPOLLIN;
     state->efd_event.data.u32 = 0;
-    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
+    int result = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
+    if(result != 0){
+            printf("register fd failed %d %d\n", result, errno);
+            fflush(stdout);
+    }
     state->udp_rcv_len = maxDatagramsPerRead;
     int udp_rcv_size = maxDatagramsPerRead * (sizeof(struct mmsghdr));
     state->udp_rcv = (struct mmsghdr *) malloc( udp_rcv_size );
@@ -119,6 +131,9 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
     event->events = eventTypes;
     event->data.u32 = idx;
     int result = epoll_ctl(state->fd, op, fd, event);
-    //printf("%d ctl fd %d result %d errno %d\n", op, fd, result, errno);
+    if(result != 0){
+        printf("%d ctl fd %d result %d errno %d\n", op, fd, result, errno);
+        fflush(stdout);
+    }
     return (jlong) event;
   }
