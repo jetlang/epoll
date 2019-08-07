@@ -35,9 +35,9 @@ public class LatencyMain {
         }
         ;
         System.out.println("seed = " + seed);
-        run(f, 5_000_000, seed, 5);
+        run(f, 5_000_000, seed, 0);
         for (int i = 0; i < 10; i++) {
-            run(f, 1000, seed, 500);
+            run(f, 1000, seed, 0);
         }
     }
 
@@ -61,10 +61,12 @@ public class LatencyMain {
             buf.putLong(System.nanoTime());
             buf.flip();
             sender.send(buf, target);
-            long sentNanos = System.nanoTime();
-            int sleepTimeNanos = random.nextInt((int) TimeUnit.MICROSECONDS.toNanos(maxSleepMicros));
-            while (System.nanoTime() - sentNanos < sleepTimeNanos) {
-                Thread.yield();
+            if (maxSleepMicros > 0) {
+                long sentNanos = System.nanoTime();
+                int sleepTimeNanos = random.nextInt((int) TimeUnit.MICROSECONDS.toNanos(maxSleepMicros));
+                while (System.nanoTime() - sentNanos < sleepTimeNanos) {
+                    Thread.yield();
+                }
             }
         }
 
