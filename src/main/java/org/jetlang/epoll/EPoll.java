@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -148,12 +147,8 @@ public class EPoll implements Executor {
     }
 
     private void cleanUpNativeResources() {
-        List<Integer> allFds = new ArrayList<>(fds.size());
-        for (State fd : fds) {
-            allFds.add(fd.fd);
-        }
-        for (Integer allFd : allFds) {
-            remove(allFd);
+        for (Integer fd : new ArrayList<>(stateMap.keySet())) {
+            remove(fd);
         }
         freeNativeMemory(ptrAddress);
     }
