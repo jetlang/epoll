@@ -53,13 +53,16 @@ public class LatencyMain {
             }
         }
 
-        latch.await(5, TimeUnit.MINUTES);
+        boolean result = latch.await(5, TimeUnit.MINUTES);
         e.run();
 
         try {
             rcv.close();
         } catch (IOException closeFailed) {
             closeFailed.printStackTrace();
+        }
+        if (!result) {
+            throw new RuntimeException("Failed to complete: " + f);
         }
     }
 
@@ -77,6 +80,9 @@ public class LatencyMain {
                     latch.countDown();
                     System.out.println("Epoll Receive nanos " + (totalLatency / msgCount));
                 }
+                if (cnt == 1) {
+                    System.out.println("epoll cnt = " + cnt);
+                }
                 return EventResult.Continue;
             }
 
@@ -85,11 +91,9 @@ public class LatencyMain {
             }
         });
         return () -> {
-            e.close();
-            try {
-                e.getThread().join(10_000);
-            } catch (InterruptedException ex) {
-
+            boolean result = e.awaitClose(10_000);
+            if (!result) {
+                throw new RuntimeException("Thread failed to exit: " + e.getThread());
             }
         };
     }

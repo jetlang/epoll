@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/uio.h>
 #include <errno.h>
+#include <inttypes.h>
 
 struct epoll_state {
    int fd;
@@ -25,10 +26,10 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
   (JNIEnv *, jclass, jlong ptrAddress, jint timeout){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
     int result = epoll_wait(state->fd, state->events, state->max_events, timeout);
-//    printf("epoll wait %d\n", result);
-//    printf("events_address %p\n", &state->events);
-//    printf("events_address.fd %p\n", &state->events[0].data.fd);
-//    fflush(stdout);
+    if(result < 0){
+      printf("epoll wait %d %d\n", result, errno);
+      fflush(stdout);
+    }
     return result;
  }
 
@@ -112,15 +113,24 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
   (JNIEnv *, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
-      uint64_t d;
-      write(state->efd, &d, sizeof(uint64_t));
+      uint64_t d = 1;
+      int result = write(state->efd, &d, sizeof(uint64_t));
+      if(result != 8){
+          printf("interrupt write result %d errno %d\n", result, errno);
+          fflush(stdout);
+      }
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
   (JNIEnv *, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       uint64_t d;
-      read(state->efd, &d, sizeof(uint64_t));
+      int result =read(state->efd, &d, sizeof(uint64_t));
+    if(result != 8 || d != 1){
+        printf("interrupt read result %d errno %d value %" PRIu64 "\n", result, errno, d);
+        fflush(stdout);
+    }
+
   }
 
 

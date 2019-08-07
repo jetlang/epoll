@@ -180,6 +180,16 @@ public class EPoll implements Executor {
         }
     }
 
+    public boolean awaitClose(int timeoutInMilis) {
+        close();
+        try {
+            getThread().join(timeoutInMilis);
+        } catch (InterruptedException e) {
+
+        }
+        return !getThread().isAlive();
+    }
+
 
     protected void runEvent(Runnable runnable) {
         runnable.run();
@@ -207,10 +217,11 @@ public class EPoll implements Executor {
 
     public Runnable register(DatagramChannel channel, DatagramReader reader) {
         final int fd = FdUtils.getFd(channel);
+        final int eventTypes = EventTypes.EPOLLIN.value;
         execute(() -> {
             State e = claimState();
             e.init(fd, reader);
-            addFd(EventTypes.EPOLLIN.value, fd, e);
+            addFd(eventTypes, fd, e);
             stateMap.put(fd, e);
         });
         return () -> {
