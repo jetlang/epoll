@@ -33,14 +33,6 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
     return result;
  }
 
-
-JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
-  (JNIEnv *, jclass, jlong ptrAddress){
-    struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    return (jlong) state->events;
-}
-
-
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
   (JNIEnv *, jclass, jlong ptrAddress, jint idx){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
@@ -53,9 +45,10 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getMsgLengthAddress
     return (jlong) &state->udp_rcv[idx].msg_len;
 }
 
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
-  (JNIEnv *, jclass){
-    return sizeof(struct epoll_event);
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
+  (JNIEnv *, jclass, jlong ptrAddress, jint idx){
+      struct epoll_state *state = (struct epoll_state *) ptrAddress;
+      return (jlong) &state->events[idx].data.u32;
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init

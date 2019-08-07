@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EPoll implements Executor {
 
-    private static final int EVENT_SIZE;
-
     private static final Unsafe unsafe;
 
     static {
@@ -25,13 +23,12 @@ public class EPoll implements Executor {
             throw new ExceptionInInitializerError(failed);
         }
         System.loadLibrary("jetlang-epoll");
-        EVENT_SIZE = getEpollEventSize();
     }
 
     private final Object lock = new Object();
     private final long ptrAddress;
     private final Packet[] udpReadBuffers;
-    private final long eventArrayAddress;
+    private final long[] eventIdxAddresses;
     private final Thread thread;
     private boolean running = true;
     private ArrayList<Runnable> pending = new ArrayList<>();
@@ -95,21 +92,24 @@ public class EPoll implements Executor {
     }
 
     public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, int pollTimeout) {
-        this.ptrAddress = init(maxSelectedEvents + 1, maxDatagramsPerRead, readBufferBytes);
+        maxSelectedEvents++; // + 1 for interrupt handler
+        this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.udpReadBuffers = new Packet[maxDatagramsPerRead];
         for (int i = 0; i < maxDatagramsPerRead; i++) {
             long readBufferAddress = getReadBufferAddress(ptrAddress, i);
             Packet p = new Packet(unsafe, readBufferAddress, getMsgLengthAddress(ptrAddress, i));
             this.udpReadBuffers[i] = p;
         }
-        this.eventArrayAddress = getEventArrayAddress(ptrAddress);
+        this.eventIdxAddresses = new long[maxSelectedEvents];
+        for (int i = 0; i < maxSelectedEvents; i++) {
+            this.eventIdxAddresses[i] = getEpollEventIdxAddress(ptrAddress, i);
+        }
 
         Runnable eventLoop = () -> {
             while (running) {
                 int events = select(ptrAddress, pollTimeout);
                 for (int i = 0; i < events; i++) {
-                    long structAddress = eventArrayAddress + EVENT_SIZE * i;
-                    int idx = unsafe.getInt(structAddress + 4);
+                    int idx = unsafe.getInt(eventIdxAddresses[i]);
                     State state = fds.get(idx);
                     EventResult result = state.handler.onEvent();
                     if (result == EventResult.Remove) {
@@ -186,13 +186,11 @@ public class EPoll implements Executor {
 
     private static native int select(long ptrAddress, int timeout);
 
-    private static native long getEventArrayAddress(long ptrAddress);
+    private static native long getEpollEventIdxAddress(long ptrAddress, int idx);
 
     private static native long getReadBufferAddress(long ptrAddress, int idx);
 
     private static native long getMsgLengthAddress(long ptrAddress, int idx);
-
-    private static native int getEpollEventSize();
 
     private static native long init(int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes);
 

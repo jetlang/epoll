@@ -19,14 +19,6 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
 
 /*
  * Class:     org_jetlang_epoll_EPoll
- * Method:    getEventArrayAddress
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEventArrayAddress
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_jetlang_epoll_EPoll
  * Method:    getReadBufferAddress
  * Signature: (J)J
  */
@@ -37,8 +29,8 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getMsgLengthAddress
   (JNIEnv *, jclass, jlong, jint);
 
 
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventSize
-  (JNIEnv *, jclass);
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
+  (JNIEnv *, jclass, jlong, jint);
 
 
 /*
