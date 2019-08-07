@@ -42,13 +42,7 @@ public class EPoll implements Executor {
     private final AtomicBoolean started = new AtomicBoolean();
     private final Controls controls = new Controls();
 
-    private interface EventHandler {
-        EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress);
-
-        void onRemove();
-    }
-
-    private class Controls {
+    public class Controls {
 
         public int receive(int fd) {
             return recvmmsg(ptrAddress, fd);
@@ -59,7 +53,7 @@ public class EPoll implements Executor {
 
         public int fd;
         public final int idx;
-        public EventHandler handler;
+        public EventConsumer handler;
         private boolean hasNativeStructure;
         private long eventAddress;
 
@@ -79,27 +73,28 @@ public class EPoll implements Executor {
             hasNativeStructure = true;
         }
 
-        public void init(int fd, DatagramReader reader) {
+        public void init(int fd, EventConsumer reader) {
             this.fd = fd;
-            this.handler = new EventHandler() {
-                @Override
-                public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
-                    for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
-                        for (int i = 0; i < numRecv; i++) {
-                            EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
-                            if (r == EventResult.Remove) {
-                                return r;
-                            }
-                        }
-                    }
-                    return EventResult.Continue;
-                }
-
-                @Override
-                public void onRemove() {
-                    reader.onRemove();
-                }
-            };
+            this.handler = reader;
+//            this.handler = new EventHandler() {
+//                @Override
+//                public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
+//                    for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
+//                        for (int i = 0; i < numRecv; i++) {
+//                            EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
+//                            if (r == EventResult.Remove) {
+//                                return r;
+//                            }
+//                        }
+//                    }
+//                    return EventResult.Continue;
+//                }
+//
+//                @Override
+//                public void onRemove() {
+//                    reader.onRemove();
+//                }
+//            };
         }
     }
 
@@ -118,7 +113,7 @@ public class EPoll implements Executor {
                     long structAddress = eventArrayAddress + EVENT_SIZE * i;
                     int idx = unsafe.getInt(structAddress + 4);
                     State state = fds.get(idx);
-                    EventResult result = state.handler.onEvent(controls, unsafe, udpReadBuffers);
+                    EventResult result = state.handler.onEvent();
                     if (result == EventResult.Remove) {
                         remove(state.fd);
                     }
@@ -128,11 +123,11 @@ public class EPoll implements Executor {
         };
         this.thread = new Thread(eventLoop, threadName);
         State interrupt = claimState();
-        interrupt.handler = new EventHandler() {
+        interrupt.handler = new EventConsumer() {
             ArrayList<Runnable> swap = new ArrayList<>();
 
             @Override
-            public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
+            public EventResult onEvent() {
                 synchronized (lock) {
                     ArrayList<Runnable> tmp = pending;
                     pending = swap;
@@ -218,9 +213,14 @@ public class EPoll implements Executor {
     public Runnable register(DatagramChannel channel, DatagramReader reader) {
         final int fd = FdUtils.getFd(channel);
         final int eventTypes = EventTypes.EPOLLIN.value;
+        DatagramReader.Factory factory = new DatagramReader.Factory(reader);
+        return register(fd, eventTypes, factory);
+    }
+
+    public Runnable register(int fd, int eventTypes, DatagramReader.Factory factory) {
         execute(() -> {
             State e = claimState();
-            e.init(fd, reader);
+            e.init(fd, factory.create(fd, unsafe, controls, udpReadBuffers));
             addFd(eventTypes, fd, e);
             stateMap.put(fd, e);
         });

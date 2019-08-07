@@ -69,7 +69,7 @@ public class LatencyMain {
     private static Runnable createEpoll(DatagramChannel rcv, int msgCount, CountDownLatch latch) {
         EPoll e = new EPoll("epoll", 1, 16, 8);
         e.start();
-        e.register(rcv, new DatagramReader() {
+        DatagramReader datagramReader = new DatagramReader() {
             int cnt = 0;
             long totalLatency = 0;
 
@@ -89,7 +89,8 @@ public class LatencyMain {
             @Override
             public void onRemove() {
             }
-        });
+        };
+        e.register(rcv, datagramReader);
         return () -> {
             boolean result = e.awaitClose(10_000);
             if (!result) {
