@@ -76,25 +76,6 @@ public class EPoll implements Executor {
         public void init(int fd, EventConsumer reader) {
             this.fd = fd;
             this.handler = reader;
-//            this.handler = new EventHandler() {
-//                @Override
-//                public EventResult onEvent(Controls c, Unsafe unsafe, long[] readBufferAddress) {
-//                    for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
-//                        for (int i = 0; i < numRecv; i++) {
-//                            EventResult r = reader.onRead(unsafe, readBufferAddress[i]);
-//                            if (r == EventResult.Remove) {
-//                                return r;
-//                            }
-//                        }
-//                    }
-//                    return EventResult.Continue;
-//                }
-//
-//                @Override
-//                public void onRemove() {
-//                    reader.onRemove();
-//                }
-//            };
         }
     }
 
