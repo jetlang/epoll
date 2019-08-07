@@ -217,7 +217,7 @@ public class EPoll implements Executor {
         return register(fd, eventTypes, factory);
     }
 
-    public Runnable register(int fd, int eventTypes, DatagramReader.Factory factory) {
+    public Runnable register(int fd, int eventTypes, EventConsumer.Factory factory) {
         execute(() -> {
             State e = claimState();
             e.init(fd, factory.create(fd, unsafe, controls, udpReadBuffers));
