@@ -18,6 +18,35 @@ public class LatencyMain {
         Runnable create(DatagramChannel rcv, int msgCount, CountDownLatch latch);
     }
 
+    public static class Stats {
+
+        private final String name;
+        private final int msgCount;
+        long maxLatency = 0;
+        int cnt = 0;
+        long totalLatency = 0;
+
+        public Stats(String name, int msgCount) {
+            this.name = name;
+            this.msgCount = msgCount;
+        }
+
+        public void record(long nanos) {
+            long latency = System.nanoTime() - nanos;
+            this.maxLatency = Math.max(latency, maxLatency);
+            this.totalLatency += latency;
+            cnt++;
+        }
+
+        public boolean isComplete() {
+            return cnt == msgCount;
+        }
+
+        public void logStats() {
+            System.out.println(name + " Avg " + (totalLatency / msgCount) + " max " + maxLatency);
+        }
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         long seed = Long.parseLong(args[1]);
         final Factory f;
@@ -33,11 +62,11 @@ public class LatencyMain {
         }
         ;
         System.out.println("seed = " + seed);
-        run(f, 5_000_000, seed, 0);
+        run(f, 1_000_000, seed, 50);
         for (int i = 0; i < 10; i++) {
-            run(f, 1000, seed, 0);
+            run(f, 100_000, seed, 100);
         }
-        run(f, 5_000_000, seed, 0);
+        run(f, 1_000_000, seed, 50);
     }
 
     private static void run(Factory f, int msgCount, long seed, int maxSleepMicros) throws IOException, InterruptedException {
@@ -86,16 +115,14 @@ public class LatencyMain {
         EPoll e = new EPoll("epoll", 1, 16, 8, 0);
         e.start();
         DatagramReader datagramReader = new DatagramReader() {
-            int cnt = 0;
-            long totalLatency = 0;
+            private final Stats s = new Stats("epoll", msgCount);
 
             @Override
             public EventResult onRead(EPoll.Packet pkt) {
-                int length = pkt.getLength();
-                totalLatency += (System.nanoTime() - pkt.unsafe.getLong(pkt.bufferAddress));
-                if (++cnt == msgCount) {
+                s.record(pkt.unsafe.getLong(pkt.bufferAddress));
+                if (s.isComplete()) {
                     latch.countDown();
-                    System.out.println("Epoll Receive nanos " + (totalLatency / msgCount) + " " + length);
+                    s.logStats();
                 }
                 return EventResult.Continue;
             }
@@ -121,9 +148,8 @@ public class LatencyMain {
                 @Override
                 public void run() {
                     final ByteBuffer b = ByteBuffer.allocateDirect(8).order(ByteOrder.LITTLE_ENDIAN);
-                    int count = 0;
-                    long latency = 0;
                     boolean running = true;
+                    Stats stats = new Stats("nio", msgCount);
                     while (running) {
                         try {
                             int keys = s.selectNow();
@@ -131,11 +157,11 @@ public class LatencyMain {
                                 Set<SelectionKey> selected = s.selectedKeys();
                                 while (running && rcv.receive(b) != null) {
                                     b.flip();
-                                    latency += (System.nanoTime() - b.getLong());
+                                    stats.record(b.getLong());
                                     b.clear();
-                                    if (++count == msgCount) {
+                                    if (stats.isComplete()) {
                                         latch.countDown();
-                                        System.out.println("Nio Receive nanos " + (latency / msgCount));
+                                        stats.logStats();
                                         running = false;
                                     }
                                 }
