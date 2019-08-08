@@ -166,11 +166,10 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       uint64_t d;
       int result =read(state->efd, &d, sizeof(uint64_t));
-    if(result != 8 || d != 1){
-        printf("interrupt read result %d errno %d value %" PRIu64 "\n", result, errno, d);
+    if(result != 8){
+        printf("interrupt read result %d errno %d\n", result, errno);
         fflush(stdout);
     }
-
   }
 
 
