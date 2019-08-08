@@ -7,31 +7,37 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#undef org_jetlang_epoll_EPoll_EVENT_SIZE
-#define org_jetlang_epoll_EPoll_EVENT_SIZE 24L
 /*
  * Class:     org_jetlang_epoll_EPoll
  * Method:    select
- * Signature: (J)I
+ * Signature: (JI)I
  */
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
   (JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     org_jetlang_epoll_EPoll
+ * Method:    getEpollEventIdxAddress
+ * Signature: (JI)J
+ */
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
+  (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     org_jetlang_epoll_EPoll
  * Method:    getReadBufferAddress
- * Signature: (J)J
+ * Signature: (JI)J
  */
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
   (JNIEnv *, jclass, jlong, jint);
 
+/*
+ * Class:     org_jetlang_epoll_EPoll
+ * Method:    getMsgLengthAddress
+ * Signature: (JI)J
+ */
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getMsgLengthAddress
   (JNIEnv *, jclass, jlong, jint);
-
-
-JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
-  (JNIEnv *, jclass, jlong, jint);
-
 
 /*
  * Class:     org_jetlang_epoll_EPoll
@@ -57,19 +63,29 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     org_jetlang_epoll_EPoll
+ * Method:    clearInterrupt
+ * Signature: (J)V
+ */
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
   (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     org_jetlang_epoll_EPoll
  * Method:    ctl
- * Signature: (JIIII)I
+ * Signature: (JIIII)J
  */
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
   (JNIEnv *, jclass, jlong, jint, jint, jint, jint);
 
+/*
+ * Class:     org_jetlang_epoll_EPoll
+ * Method:    recvmmsg
+ * Signature: (JI)I
+ */
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
-    (JNIEnv *, jclass, jlong, jint);
+  (JNIEnv *, jclass, jlong, jint);
 
 #ifdef __cplusplus
 }

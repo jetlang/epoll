@@ -8,7 +8,7 @@ clean :
 	rm jetlang-epoll.o libjetlang-epoll.so
 
 java-prod :
-	${JAVA_HOME}/bin/javac -d out/production/epoll -sourcepath src/main/java src/main/java/org/jetlang/epoll/EPoll.java
+	${JAVA_HOME}/bin/javac -h src/main/c -d out/production/epoll -sourcepath src/main/java src/main/java/org/jetlang/epoll/EPoll.java
 
 java-test :
 	${JAVA_HOME}/bin/javac -cp out/production/epoll -d out/test/epoll -sourcepath src/test/java src/test/java/org/jetlang/epoll/Main.java src/test/java/org/jetlang/epoll/LatencyMain.java
