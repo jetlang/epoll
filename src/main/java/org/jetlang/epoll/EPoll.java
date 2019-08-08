@@ -91,7 +91,8 @@ public class EPoll implements Executor {
         }
     }
 
-    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, PollStrategy poller) {
+    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes,
+                 PollStrategy poller, EventBatch eventBatcher) {
         maxSelectedEvents++; // + 1 for interrupt handler
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.udpReadBuffers = new Packet[maxDatagramsPerRead];
@@ -108,6 +109,7 @@ public class EPoll implements Executor {
         Runnable eventLoop = () -> {
             while (running) {
                 int events = poller.poll(ptrAddress);
+                eventBatcher.start(events);
                 for (int i = 0; i < events; i++) {
                     int idx = unsafe.getInt(eventIdxAddresses[i]);
                     State state = fds.get(idx);
@@ -116,10 +118,11 @@ public class EPoll implements Executor {
                         remove(state.fd);
                     }
                 }
+                eventBatcher.end();
             }
             cleanUpNativeResources();
         };
-        this.thread = new Thread(eventLoop, threadName);
+        this.thread = createThread(eventLoop, threadName);
         State interrupt = claimState();
         interrupt.handler = new EventConsumer() {
             ArrayList<Runnable> swap = new ArrayList<>();
@@ -144,6 +147,12 @@ public class EPoll implements Executor {
 
             }
         };
+    }
+
+    protected Thread createThread(Runnable eventLoop, String threadName) {
+        Thread t = new Thread(eventLoop, threadName);
+        t.setDaemon(true);
+        return t;
     }
 
     private void cleanUpNativeResources() {
