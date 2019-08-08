@@ -1,0 +1,17 @@
+resource out/jetlang-epoll.jar
+resource out/jetlang-epoll-src.jar
+resource libjetlang-epoll.so
+
+config default
+   include :nodeps
+   include :jni
+end
+
+config no_deps
+   append CLASSPATH=@/out/jetlang-epoll.jar
+   append SOURCEPATH=@/out/jetlang-epoll-src.jar
+end
+
+config jni
+  apppend LIBPATH=@/libjetlang-epoll.so
+end

@@ -18,6 +18,7 @@ java : java-prod java-test
 
 jar : java-prod
 	${JAVA_HOME}/bin/jar cvf out/jetlang-epoll.jar -C out/production/epoll/ .
+	${JAVA_HOME}/bin/jar cvf out/jetlang-epoll-src.jar -C src/main/java/ .
 
 java-clean :
 	rm -rf out/
