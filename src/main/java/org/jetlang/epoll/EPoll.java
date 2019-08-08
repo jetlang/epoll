@@ -91,7 +91,7 @@ public class EPoll implements Executor {
         }
     }
 
-    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, int pollTimeout) {
+    public EPoll(String threadName, int maxSelectedEvents, int maxDatagramsPerRead, int readBufferBytes, PollStrategy poller) {
         maxSelectedEvents++; // + 1 for interrupt handler
         this.ptrAddress = init(maxSelectedEvents, maxDatagramsPerRead, readBufferBytes);
         this.udpReadBuffers = new Packet[maxDatagramsPerRead];
@@ -107,7 +107,7 @@ public class EPoll implements Executor {
 
         Runnable eventLoop = () -> {
             while (running) {
-                int events = select(ptrAddress, pollTimeout);
+                int events = poller.poll(ptrAddress);
                 for (int i = 0; i < events; i++) {
                     int idx = unsafe.getInt(eventIdxAddresses[i]);
                     State state = fds.get(idx);
@@ -184,7 +184,9 @@ public class EPoll implements Executor {
         runnable.run();
     }
 
-    private static native int select(long ptrAddress, int timeout);
+    static native int epollWait(long ptrAddress);
+
+    static native int epollSpin(long ptrAddress);
 
     private static native long getEpollEventIdxAddress(long ptrAddress, int idx);
 

@@ -112,7 +112,7 @@ public class LatencyMain {
     }
 
     private static Runnable createEpoll(DatagramChannel rcv, int msgCount, CountDownLatch latch) {
-        EPoll e = new EPoll("epoll", 1, 16, 8, 0);
+        EPoll e = new EPoll("epoll", 1, 16, 8, new PollStrategy.Spin());
         e.start();
         DatagramReader datagramReader = new DatagramReader() {
             private final Stats s = new Stats("epoll", msgCount);

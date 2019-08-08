@@ -22,16 +22,33 @@ struct epoll_state {
    struct mmsghdr * udp_rcv;
 };
 
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
-  (JNIEnv *, jclass, jlong ptrAddress, jint timeout){
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
+  (JNIEnv *, jclass, jlong ptrAddress){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    int result = epoll_wait(state->fd, state->events, state->max_events, timeout);
+    int result = epoll_wait(state->fd, state->events, state->max_events, -1);
     if(result < 0){
       printf("epoll wait %d %d\n", result, errno);
       fflush(stdout);
     }
     return result;
  }
+
+ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpin
+   (JNIEnv *, jclass, jlong ptrAddress){
+     struct epoll_state *state = (struct epoll_state *) ptrAddress;
+     int result = 0;
+     int epoll_fd = state->fd;
+     int max_events = state->max_events;
+     struct epoll_event *events = state->events;
+     for(result = epoll_wait(epoll_fd, events, max_events, 0); result == 0; result = epoll_wait(epoll_fd, events, max_events, 0)){
+     
+     }
+     if(result < 0){
+       printf("epoll wait %d %d\n", result, errno);
+       fflush(stdout);
+     }
+     return result;
+  }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getReadBufferAddress
   (JNIEnv *, jclass, jlong ptrAddress, jint idx){

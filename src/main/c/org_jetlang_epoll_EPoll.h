@@ -9,11 +9,19 @@ extern "C" {
 #endif
 /*
  * Class:     org_jetlang_epoll_EPoll
- * Method:    select
- * Signature: (JI)I
+ * Method:    epollWait
+ * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_select
-  (JNIEnv *, jclass, jlong, jint);
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     org_jetlang_epoll_EPoll
+ * Method:    epollSpin
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpin
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     org_jetlang_epoll_EPoll

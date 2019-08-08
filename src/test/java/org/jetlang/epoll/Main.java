@@ -16,7 +16,7 @@ public class Main {
         rcv.configureBlocking(false);
 
         DatagramChannel sender = DatagramChannel.open();
-        EPoll e = new EPoll("epoll", 5, 16, 1024 * 8, -1);
+        EPoll e = new EPoll("epoll", 5, 16, 1024 * 8, new PollStrategy.Wait());
         e.start();
         int msgCount = 20;
         CountDownLatch latch = new CountDownLatch(msgCount);
