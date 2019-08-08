@@ -4,6 +4,8 @@ import sun.misc.Unsafe;
 
 public interface DatagramReader {
 
+    void beforeCreateOnEPollThread();
+    
     EventResult readPackets(int numRecv, EPoll.Packet[] pkts);
 
     void onRemove();
@@ -19,6 +21,7 @@ public interface DatagramReader {
 
         @Override
         public EventConsumer create(int fd, Unsafe unsafe, EPoll.Controls c, EPoll.Packet[] pkts) {
+            reader.beforeCreateOnEPollThread();
             return new EventConsumer() {
                 @Override
                 public EventResult onEvent() {
@@ -38,5 +41,6 @@ public interface DatagramReader {
             };
         }
     }
+
 
 }
