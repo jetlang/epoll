@@ -10,6 +10,7 @@
 #include <sys/uio.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <immintrin.h>
 
 struct epoll_state {
    int fd;
@@ -35,13 +36,13 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
 
  JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpin
    (JNIEnv *, jclass, jlong ptrAddress){
-     struct epoll_state *state = (struct epoll_state *) ptrAddress;
+     const struct epoll_state *state = (struct epoll_state *) ptrAddress;
+     const int epoll_fd = state->fd;
+     const int max_events = state->max_events;
+     struct epoll_event * const events = state->events;
      int result = 0;
-     int epoll_fd = state->fd;
-     int max_events = state->max_events;
-     struct epoll_event *events = state->events;
      for(result = epoll_wait(epoll_fd, events, max_events, 0); result == 0; result = epoll_wait(epoll_fd, events, max_events, 0)){
-     
+          _mm_pause();
      }
      if(result < 0){
        printf("epoll wait %d %d\n", result, errno);
