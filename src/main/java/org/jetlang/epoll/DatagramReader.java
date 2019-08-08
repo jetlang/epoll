@@ -4,7 +4,9 @@ import sun.misc.Unsafe;
 
 public interface DatagramReader {
 
-    void beforeCreateOnEPollThread();
+    default void beforeCreateOnEPollThread() {
+
+    }
     
     EventResult readPackets(int numRecv, EPoll.Packet[] pkts);
 
