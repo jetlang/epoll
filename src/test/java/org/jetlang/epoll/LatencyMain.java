@@ -120,11 +120,14 @@ public class LatencyMain {
             private final Stats s = new Stats("epoll", msgCount);
 
             @Override
-            public EventResult onRead(EPoll.Packet pkt) {
-                s.record(pkt.unsafe.getLong(pkt.bufferAddress));
-                if (s.isComplete()) {
-                    latch.countDown();
-                    s.logStats();
+            public EventResult readPackets(int numRecv, EPoll.Packet[] pkts) {
+                for (int i = 0; i < numRecv; i++) {
+                    EPoll.Packet pkt = pkts[i];
+                    s.record(pkt.unsafe.getLong(pkt.bufferAddress));
+                    if (s.isComplete()) {
+                        latch.countDown();
+                        s.logStats();
+                    }
                 }
                 return EventResult.Continue;
             }

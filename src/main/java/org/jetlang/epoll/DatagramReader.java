@@ -4,7 +4,7 @@ import sun.misc.Unsafe;
 
 public interface DatagramReader {
 
-    EventResult onRead(EPoll.Packet pkt);
+    EventResult readPackets(int numRecv, EPoll.Packet[] pkts);
 
     void onRemove();
 
@@ -23,11 +23,9 @@ public interface DatagramReader {
                 @Override
                 public EventResult onEvent() {
                     for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
-                        for (int i = 0; i < numRecv; i++) {
-                            EventResult r = reader.onRead(pkts[i]);
-                            if (r == EventResult.Remove) {
-                                return r;
-                            }
+                        EventResult r = reader.readPackets(numRecv, pkts);
+                        if (r == EventResult.Remove) {
+                            return r;
                         }
                     }
                     return EventResult.Continue;

@@ -22,13 +22,16 @@ public class Main {
         CountDownLatch latch = new CountDownLatch(msgCount);
         e.register(rcv, new DatagramReader() {
             @Override
-            public EventResult onRead(EPoll.Packet pkt) {
-                System.out.println(" unsafe.getLong = " + pkt.unsafe.getLong(pkt.bufferAddress));
-                latch.countDown();
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException ex) {
+            public EventResult readPackets(int numRecv, EPoll.Packet[] pkts) {
+                for (int i = 0; i < numRecv; i++) {
+                    EPoll.Packet pkt = pkts[i];
+                    System.out.println(" unsafe.getLong = " + pkt.unsafe.getLong(pkt.bufferAddress));
+                    latch.countDown();
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException ex) {
 
+                    }
                 }
                 return EventResult.Continue;
             }
@@ -45,7 +48,7 @@ public class Main {
         });
         InetSocketAddress target = new InetSocketAddress("localhost", 9999);
         ByteBuffer buf = ByteBuffer.allocateDirect(8).order(ByteOrder.LITTLE_ENDIAN);
-        for(int i = 0; i < msgCount; i++){
+        for (int i = 0; i < msgCount; i++) {
             buf.clear();
             buf.putLong(i);
             buf.flip();
