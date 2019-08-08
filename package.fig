@@ -13,5 +13,5 @@ config no_deps
 end
 
 config jni
-  apppend LIBPATH=@/libjetlang-epoll.so
+  append LIBPATH=@/libjetlang-epoll.so
 end
