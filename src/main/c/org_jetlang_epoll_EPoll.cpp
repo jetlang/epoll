@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <immintrin.h>
+#include <chrono>
 
 struct epoll_state {
    int fd;
@@ -47,6 +48,28 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
      if(result < 0){
        printf("epoll wait %d %d\n", result, errno);
        fflush(stdout);
+     }
+     return result;
+  }
+
+ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpinWait
+   (JNIEnv *, jclass, jlong ptrAddress, jlong microseconds_to_spin){
+     const struct epoll_state *state = (struct epoll_state *) ptrAddress;
+     const int epoll_fd = state->fd;
+     const int max_events = state->max_events;
+     struct epoll_event * const events = state->events;
+     int result = epoll_wait(epoll_fd, events, max_events, 0);
+     if(result != 0){
+        return result;
+     }
+     const auto start = std::chrono::high_resolution_clock::now();
+     for(result = epoll_wait(epoll_fd, events, max_events, 0); result == 0; result = epoll_wait(epoll_fd, events, max_events, 0)){
+        auto elapsed = std::chrono::high_resolution_clock::now() - start;
+        long long microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+        if(microseconds >= microseconds_to_spin){
+           return epoll_wait(epoll_fd, events, max_events, -1);
+        }
+        _mm_pause();
      }
      return result;
   }

@@ -25,6 +25,14 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpin
 
 /*
  * Class:     org_jetlang_epoll_EPoll
+ * Method:    epollSpinWait
+ * Signature: (JJ)I
+ */
+JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpinWait
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     org_jetlang_epoll_EPoll
  * Method:    getEpollEventIdxAddress
  * Signature: (JI)J
  */

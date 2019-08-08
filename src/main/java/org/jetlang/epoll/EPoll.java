@@ -188,6 +188,8 @@ public class EPoll implements Executor {
 
     static native int epollSpin(long ptrAddress);
 
+    static native int epollSpinWait(long ptrAddress, long microsecondsToSpin);
+
     private static native long getEpollEventIdxAddress(long ptrAddress, int idx);
 
     private static native long getReadBufferAddress(long ptrAddress, int idx);

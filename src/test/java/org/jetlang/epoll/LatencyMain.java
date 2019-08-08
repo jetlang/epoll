@@ -112,7 +112,9 @@ public class LatencyMain {
     }
 
     private static Runnable createEpoll(DatagramChannel rcv, int msgCount, CountDownLatch latch) {
-        EPoll e = new EPoll("epoll", 1, 16, 8, new PollStrategy.Spin());
+        PollStrategy poller = new PollStrategy.SpinWait(1000);
+        //PollStrategy poller = new PollStrategy.Wait();
+        EPoll e = new EPoll("epoll", 1, 16, 8, poller);
         e.start();
         DatagramReader datagramReader = new DatagramReader() {
             private final Stats s = new Stats("epoll", msgCount);
@@ -152,7 +154,7 @@ public class LatencyMain {
                     Stats stats = new Stats("nio", msgCount);
                     while (running) {
                         try {
-                            int keys = s.selectNow();
+                            int keys = s.select();
                             if (keys > 0) {
                                 Set<SelectionKey> selected = s.selectedKeys();
                                 while (running && rcv.receive(b) != null) {

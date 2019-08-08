@@ -18,4 +18,17 @@ public interface PollStrategy {
             return EPoll.epollWait(ptrAddress);
         }
     }
+
+    class SpinWait implements PollStrategy {
+        private final long microsecondsToSpin;
+
+        public SpinWait(long microsecondsToSpin) {
+            this.microsecondsToSpin = microsecondsToSpin;
+        }
+
+        @Override
+        public int poll(long ptrAddress) {
+            return EPoll.epollSpinWait(ptrAddress, microsecondsToSpin);
+        }
+    }
 }
