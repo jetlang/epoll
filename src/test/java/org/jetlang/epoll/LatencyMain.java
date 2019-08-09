@@ -78,7 +78,7 @@ public class LatencyMain {
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        var e = f.create(rcv, msgCount, latch);
+        Runnable e = f.create(rcv, msgCount, latch);
         Thread.sleep(1_000);
 
         DatagramChannel sender = DatagramChannel.open();
