@@ -135,7 +135,6 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_recvmmsg
     (JNIEnv *, jclass, jlong ptrAddress, jint fd){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    //printf("to receive %d\n", state->udp_rcv_len);
     return recvmmsg(fd, state->udp_rcv, state->udp_rcv_len, 0, NULL);
 }
 
