@@ -6,6 +6,11 @@ optimized jni epoll wrapper
  * Zero Copies
  * Multi-message receive using  [recvmmsg](http://man7.org/linux/man-pages/man2/recvmmsg.2.html)
  * Easier to use Api compared to Nio
+
+## Limitations
+ * UDP only (for now). Tcp support is in development.
+ * Linux Only
+ * JDK 10+
  
 ```java
 DatagramChannel rcv = DatagramChannel.open();
@@ -28,6 +33,9 @@ e.register(rcv, new DatagramReader() {
             ex.printStackTrace();
         }
     }
-});
+});  
+
+//The Epoll instance is also an executor
+e.execute(()-> System.out.println("Hello on epoll thread."));
 
 ```   
