@@ -218,9 +218,13 @@ public class EPoll implements Executor {
     private static native int recvmmsg(long ptrAddress, int fd);
 
     public Runnable register(DatagramChannel channel, DatagramReader reader) {
+        DatagramReader.Factory factory = new DatagramReader.Factory(reader);
+        return register(channel, factory);
+    }
+
+    public Runnable register(DatagramChannel channel, EventConsumer.Factory factory) {
         final int fd = FdUtils.getFd(channel);
         final int eventTypes = EventTypes.EPOLLIN.value;
-        DatagramReader.Factory factory = new DatagramReader.Factory(reader);
         return register(fd, eventTypes, factory);
     }
 
