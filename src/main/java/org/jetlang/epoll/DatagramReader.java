@@ -32,6 +32,10 @@ public interface DatagramReader {
                         if (r == EventResult.Remove) {
                             return r;
                         }
+                        if (numRecv < pkts.length) {
+                            //no need to re-poll. recvmmsg will grab all packets available
+                            return EventResult.Continue;
+                        }
                     }
                     return EventResult.Continue;
                 }
