@@ -10,7 +10,7 @@ optimized jni epoll wrapper
 ## Limitations
  * UDP only (for now). Tcp support is in development.
  * Linux Only
- * JDK 10+
+ * JDK 8+
  
 ```java
 DatagramChannel rcv = DatagramChannel.open();
