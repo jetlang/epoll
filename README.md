@@ -21,7 +21,11 @@ e.start();
 e.register(rcv, new DatagramReader() {
     @Override
     public EventResult readPackets(int numRecv, EPoll.Packet[] pkts) {
-        System.out.println("Received " + numRecv + " Packets!");
+        for (int i = 0; i < numRecv; i++) {
+            EPoll.Packet pkt = pkts[i];
+            System.out.println(i + "/" + numRecv +" packet length " + pkt.getLength());
+            System.out.println("first byte of msg: " + pkt.unsafe.getByte(pkt.bufferAddress));
+        }
         return EventResult.Continue;
     }
 
