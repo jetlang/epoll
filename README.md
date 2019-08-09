@@ -12,6 +12,12 @@ optimized jni epoll wrapper
  * Linux Only
  * JDK 8+
  
+## Building
+```
+make all JAVA_HOME=/site/apps/jdk1.8
+``` 
+ 
+## Example 
 ```java
 DatagramChannel rcv = DatagramChannel.open();
 rcv.socket().bind(new InetSocketAddress(9999));
