@@ -12,6 +12,8 @@
 #include <inttypes.h>
 #include <immintrin.h>
 #include <chrono>
+#include <sstream>
+#include <iostream>
 
 struct epoll_state {
    int fd;
@@ -24,15 +26,22 @@ struct epoll_state {
    struct mmsghdr * udp_rcv;
 };
 
+void throwFailure(JNIEnv *env, std::string msg, int result, int errcode){
+    std::stringstream s;
+    s << msg << " failed. result: " << result << " errcode: " << errcode;
+    jclass clzz = env->FindClass("java/lang/RuntimeException");
+    if(clzz == 0){
+        printf("jetlang epoll failed result %d errno %d\n", result, errcode);
+        fflush(stdout);
+        return;
+    }
+    env->ThrowNew(clzz, s.str().c_str());
+}
+
 JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
   (JNIEnv *, jclass, jlong ptrAddress){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
-    int result = epoll_wait(state->fd, state->events, state->max_events, -1);
-    if(result < 0){
-      printf("epoll wait %d %d\n", result, errno);
-      fflush(stdout);
-    }
-    return result;
+    return epoll_wait(state->fd, state->events, state->max_events, -1);
  }
 
  JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollSpin
@@ -44,10 +53,6 @@ JNIEXPORT jint JNICALL Java_org_jetlang_epoll_EPoll_epollWait
      int result = 0;
      for(result = epoll_wait(epoll_fd, events, max_events, 0); result == 0; result = epoll_wait(epoll_fd, events, max_events, 0)){
           _mm_pause();
-     }
-     if(result < 0){
-       printf("epoll wait %d %d\n", result, errno);
-       fflush(stdout);
      }
      return result;
   }
@@ -93,28 +98,24 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
 }
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
-  (JNIEnv *, jclass, jint maxSelectedEvents, jint maxDatagramsPerRead, jint readBufferBytes){
+  (JNIEnv *env, jclass, jint maxSelectedEvents, jint maxDatagramsPerRead, jint readBufferBytes){
     int epoll_fd = epoll_create1(0);
     if(epoll_fd < 0){
-        printf("epoll_fd %d %d\n", epoll_fd, errno);
-        fflush(stdout);
+        throwFailure(env, "epoll_create1(0)", epoll_fd, errno);
     }
-
     struct epoll_state *state = (struct epoll_state *) malloc(sizeof(struct epoll_state));
     state->fd = epoll_fd;
     state->events = (struct epoll_event *) malloc(maxSelectedEvents * (sizeof(struct epoll_event)));
     state->max_events = maxSelectedEvents;
     state->efd = eventfd(0, EFD_NONBLOCK);
     if(state->efd < 0){
-        printf("create fd failed %d\n", errno);
-        fflush(stdout);
+        throwFailure(env, "eventfd(0, EFD_NONBLOCK)", state->efd, errno);
     }
     state->efd_event.events = EPOLLHUP | EPOLLERR | EPOLLIN;
     state->efd_event.data.u32 = 0;
     int result = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, state->efd, &state->efd_event);
     if(result != 0){
-            printf("register fd failed %d %d\n", result, errno);
-            fflush(stdout);
+        throwFailure(env, "epoll_ctl", result, errno);
     }
     state->udp_rcv_len = maxDatagramsPerRead;
     int udp_rcv_size = maxDatagramsPerRead * (sizeof(struct mmsghdr));
@@ -151,38 +152,36 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_interrupt
-  (JNIEnv *, jclass, jlong ptrAddress){
+  (JNIEnv *env, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       uint64_t d = 1;
       int result = write(state->efd, &d, sizeof(uint64_t));
       if(result != 8){
-          printf("interrupt write result %d errno %d\n", result, errno);
-          fflush(stdout);
+          throwFailure(env, "write", result, errno);
       }
   }
 
 JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_clearInterrupt
-  (JNIEnv *, jclass, jlong ptrAddress){
+  (JNIEnv *env, jclass, jlong ptrAddress){
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       uint64_t d;
-      int result =read(state->efd, &d, sizeof(uint64_t));
+      int result = read(state->efd, &d, sizeof(uint64_t));
     if(result != 8){
-        printf("interrupt read result %d errno %d\n", result, errno);
-        fflush(stdout);
+        throwFailure(env, "failed to clear interrupt", result, errno);
     }
   }
 
-
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_ctl
-  (JNIEnv *, jclass, jlong ptrAddress, jint op, jint eventTypes, jint fd, jint idx){
+  (JNIEnv *env, jclass, jlong ptrAddress, jint op, jint eventTypes, jint fd, jint idx){
     struct epoll_state *state = (struct epoll_state *) ptrAddress;
     struct epoll_event *event = (struct epoll_event *) malloc(sizeof(struct epoll_event));
     event->events = eventTypes;
     event->data.u32 = idx;
     int result = epoll_ctl(state->fd, op, fd, event);
     if(result != 0){
-        printf("%d ctl fd %d result %d errno %d\n", op, fd, result, errno);
-        fflush(stdout);
+        int errcode = errno;
+        free(event);
+        throwFailure(env, "epoll_ctl", result, errcode);
     }
     return (jlong) event;
   }
