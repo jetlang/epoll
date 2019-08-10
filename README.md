@@ -8,13 +8,13 @@ optimized jni epoll wrapper
  * Easier to use Api compared to Nio
 
 ## Limitations
- * UDP only (for now). Tcp support is in development.
+ * UDP only (unicast & multicast). Tcp support is in development.
  * Linux Only
  * JDK 8+
  
 ## Building
 ```
-make all JAVA_HOME=/site/apps/jdk1.8
+make all JAVA_HOME=/path/to/your/jdk1.8
 ``` 
  
 ## Example 
