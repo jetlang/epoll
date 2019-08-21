@@ -139,7 +139,7 @@ public class EPoll implements Executor {
                     runEvent(swap.get(i));
                 }
                 swap.clear();
-                return null;
+                return EventResult.Continue;
             }
 
             @Override
