@@ -4,8 +4,8 @@ CC := g++
 all : cpp jar
 
 cpp : java
-	$(CC) -O3 -c -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux src/main/c/org_jetlang_epoll_EPoll.cpp -o jetlang-epoll.o
-	$(CC) -O3 -shared -fPIC -o libjetlang-epoll.so jetlang-epoll.o
+	$(CC) -O3 -c -flto -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux src/main/c/org_jetlang_epoll_EPoll.cpp -o jetlang-epoll.o
+	$(CC) -O3 -shared -flto -fPIC -o libjetlang-epoll.so jetlang-epoll.o
 
 clean :
 	rm jetlang-epoll.o libjetlang-epoll.so
