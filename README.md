@@ -8,7 +8,6 @@ optimized jni epoll wrapper
  * Easier to use Api compared to Nio
 
 ## Limitations
- * UDP only (unicast & multicast). Tcp support is in development.
  * Linux Only
  * JDK 8+
  
