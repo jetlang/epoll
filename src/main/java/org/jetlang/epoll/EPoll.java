@@ -4,6 +4,7 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -225,6 +226,11 @@ public class EPoll implements Executor {
     public Runnable register(DatagramChannel channel, EventConsumer.Factory factory) {
         final int fd = FdUtils.getFd(channel);
         final int eventTypes = EventTypes.EPOLLIN.value;
+        return register(fd, eventTypes, factory);
+    }
+
+    public Runnable register(AbstractSelectableChannel serverSocketChannel, int eventTypes, EventConsumer.Factory factory) {
+        final int fd = FdUtils.getFd(serverSocketChannel);
         return register(fd, eventTypes, factory);
     }
 
