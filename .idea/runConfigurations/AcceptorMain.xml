@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AcceptorMain" type="Application" factoryName="Application" nameIsGenerated="true">
+    <envs>
+      <env name="LD_LIBRARY_PATH" value="." />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="org.jetlang.epoll.AcceptorMain" />
+    <module name="epoll" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
