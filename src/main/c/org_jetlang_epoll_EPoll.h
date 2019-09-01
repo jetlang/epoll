@@ -41,6 +41,14 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
 
 /*
  * Class:     org_jetlang_epoll_EPoll
+ * Method:    getEpollEventsAddress
+ * Signature: (JI)J
+ */
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventsAddress
+  (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     org_jetlang_epoll_EPoll
  * Method:    getReadBufferAddress
  * Signature: (JI)J
  */

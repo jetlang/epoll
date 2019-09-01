@@ -26,7 +26,7 @@ public interface DatagramReader {
             reader.beforeCreateOnEPollThread();
             return new EventConsumer() {
                 @Override
-                public EventResult onEvent() {
+                public EventResult onEvent(int events) {
                     for (int numRecv = c.receive(fd); numRecv > 0; numRecv = c.receive(fd)) {
                         EventResult r = reader.readPackets(numRecv, pkts);
                         if (r == EventResult.Remove) {

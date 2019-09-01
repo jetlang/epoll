@@ -30,6 +30,7 @@ public class EPoll implements Executor {
     private final long ptrAddress;
     private final Packet[] udpReadBuffers;
     private final long[] eventIdxAddresses;
+    private final long[] eventsAddresses;
     private final Thread thread;
     private boolean running = true;
     private ArrayList<Runnable> pending = new ArrayList<>();
@@ -106,7 +107,10 @@ public class EPoll implements Executor {
         for (int i = 0; i < maxSelectedEvents; i++) {
             this.eventIdxAddresses[i] = getEpollEventIdxAddress(ptrAddress, i);
         }
-
+        this.eventsAddresses = new long[maxSelectedEvents];
+        for (int i = 0; i < maxSelectedEvents; i++) {
+            this.eventsAddresses[i] = getEpollEventsAddress(ptrAddress, i);
+        }
         Runnable eventLoop = () -> {
             while (running) {
                 int events = poller.poll(ptrAddress);
@@ -114,7 +118,8 @@ public class EPoll implements Executor {
                 for (int i = 0; i < events; i++) {
                     int idx = unsafe.getInt(eventIdxAddresses[i]);
                     State state = fds.get(idx);
-                    EventResult result = state.handler.onEvent();
+                    int event = unsafe.getInt(eventsAddresses[i]);
+                    EventResult result = state.handler.onEvent(event);
                     if (result == EventResult.Remove) {
                         remove(state.fd);
                     }
@@ -129,7 +134,7 @@ public class EPoll implements Executor {
             ArrayList<Runnable> swap = new ArrayList<>();
 
             @Override
-            public EventResult onEvent() {
+            public EventResult onEvent(int events) {
                 synchronized (lock) {
                     ArrayList<Runnable> tmp = pending;
                     pending = swap;
@@ -201,6 +206,8 @@ public class EPoll implements Executor {
     static native int epollSpinWait(long ptrAddress, long microsecondsToSpin);
 
     private static native long getEpollEventIdxAddress(long ptrAddress, int idx);
+
+    private static native long getEpollEventsAddress(long ptrAddress, int idx);
 
     private static native long getReadBufferAddress(long ptrAddress, int idx);
 
@@ -299,12 +306,27 @@ public class EPoll implements Executor {
     }
 
     enum EventTypes {
-        EPOLLIN(1);
+        EPOLLIN(0x00000001),
+        EPOLLPRI(0x00000002),
+        EPOLLOUT(0x00000004),
+        EPOLLERR(0x00000008),
+        EPOLLHUP(0x00000010),
+        EPOLLNVAL(0x00000020),
+        EPOLLRDNORM(0x00000040),
+        EPOLLRDBAND(0x00000080),
+        EPOLLWRNORM(0x00000100),
+        EPOLLWRBAND(0x00000200),
+        EPOLLMSG(0x00000400),
+        EPOLLRDHUP(0x00002000);
 
         public final int value;
 
         EventTypes(int value) {
             this.value = value;
+        }
+
+        public boolean isSet(int event) {
+            return (event & value) != 0;
         }
     }
 }

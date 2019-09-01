@@ -4,7 +4,7 @@ import sun.misc.Unsafe;
 
 public interface EventConsumer {
 
-    EventResult onEvent();
+    EventResult onEvent(int events);
 
     void onRemove();
 

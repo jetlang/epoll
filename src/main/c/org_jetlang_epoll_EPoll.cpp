@@ -96,6 +96,11 @@ JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventIdxAddress
       struct epoll_state *state = (struct epoll_state *) ptrAddress;
       return (jlong) &state->events[idx].data.u32;
 }
+JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_getEpollEventsAddress
+  (JNIEnv *, jclass, jlong ptrAddress, jint idx){
+      struct epoll_state *state = (struct epoll_state *) ptrAddress;
+      return (jlong) &state->events[idx].events;
+}
 
 JNIEXPORT jlong JNICALL Java_org_jetlang_epoll_EPoll_init
   (JNIEnv *env, jclass, jint maxSelectedEvents, jint maxDatagramsPerRead, jint readBufferBytes){

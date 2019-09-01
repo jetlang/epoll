@@ -1,7 +1,5 @@
 package org.jetlang.epoll;
 
-import sun.misc.Unsafe;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -22,15 +20,20 @@ public class AcceptorMain {
         CountDownLatch latch = new CountDownLatch(1);
         e.register(server, EPoll.EventTypes.EPOLLIN.value, (fd, unsafe, controls, pkts) -> new EventConsumer() {
             @Override
-            public EventResult onEvent() {
+            public EventResult onEvent(int events) {
                 try {
                     SocketChannel client = server.accept();
                     client.configureBlocking(false);
                     System.out.println("accept = " + client);
-                    e.register(client, EPoll.EventTypes.EPOLLIN.value, (fd1, unsafe1, controls1, pkts1) -> new EventConsumer() {
+                    e.register(client, EPoll.EventTypes.EPOLLIN.value | EPoll.EventTypes.EPOLLRDHUP.value, (fd1, unsafe1, controls1, pkts1) -> new EventConsumer() {
                         ByteBuffer buffer = ByteBuffer.allocate(1024 * 8);
                         @Override
-                        public EventResult onEvent() {
+                        public EventResult onEvent(int events) {
+                            for (EPoll.EventTypes value : EPoll.EventTypes.values()) {
+                                if(value.isSet(events)){
+                                    System.out.println("event set = " + value);
+                                }
+                            }
                             try {
                                 int read = client.read(buffer);
                                 if( read < 0){
