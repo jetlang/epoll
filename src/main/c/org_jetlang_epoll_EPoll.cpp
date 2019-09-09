@@ -149,8 +149,10 @@ JNIEXPORT void JNICALL Java_org_jetlang_epoll_EPoll_freeNativeMemory
     close(state->fd);
     close(state->efd);
     free(state->events);
-    free(state->udp_rcv->msg_hdr.msg_iov->iov_base);
-    free(state->udp_rcv->msg_hdr.msg_iov);
+    for(int i = 0; i < state->udp_rcv_len; i++){
+        free(state->udp_rcv[i].msg_hdr.msg_iov->iov_base);
+        free(state->udp_rcv[i].msg_hdr.msg_iov);
+    }
     free(state->udp_rcv);
     free(state);
   }
